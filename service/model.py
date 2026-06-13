@@ -12,8 +12,9 @@ Prototype (sharwani_large.ipynb):
             emb = emb / emb.norm(dim=-1, keepdim=True)
         return emb.cpu().numpy().flatten()
 
-Loaded ONCE at process startup (module import). Loading per-request makes
-each call 10-30s.
+Loaded LAZILY on first call to siglip_embed (module import is now fast /
+network-free). The text tower is freed after load to reclaim ~half the
+model RAM — get_image_features only uses the vision tower.
 """
 
 import os
@@ -35,8 +36,22 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 _torch_threads = max(1, (os.cpu_count() or 4) // 2)
 torch.set_num_threads(_torch_threads)
 
-processor = AutoProcessor.from_pretrained(config.MODEL_HF_ID)
-model = AutoModel.from_pretrained(config.MODEL_HF_ID).to(device).eval()
+_processor = None
+_model = None
+
+
+def _ensure_loaded():
+    global _processor, _model
+    if _model is None:
+        _processor = AutoProcessor.from_pretrained(config.MODEL_HF_ID)
+        m = AutoModel.from_pretrained(config.MODEL_HF_ID).to(device).eval()
+        # Free the text tower — get_image_features only uses the vision tower.
+        if hasattr(m, "text_model"):
+            m.text_model = None
+        import gc as _gc
+        _gc.collect()
+        _model = m
+    return _processor, _model
 
 
 def siglip_embed(img_rgb: np.ndarray) -> np.ndarray:
@@ -52,6 +67,7 @@ def siglip_embed(img_rgb: np.ndarray) -> np.ndarray:
     transformers version, `get_image_features` returns either a raw
     Tensor or a `BaseModelOutputWithPooling`. We handle both.
     """
+    processor, model = _ensure_loaded()
     with timed("siglip_embed"):
         inputs = processor(images=img_rgb, return_tensors="pt").to(device)
         with torch.no_grad():
