@@ -1,0 +1,28 @@
+[project]
+name = "poshak"
+version = "0.2.0"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi",
+  "uvicorn[standard]",
+  "python-multipart",
+  "transformers",
+  "sentencepiece",
+  "pillow",
+  "numpy",
+  "opencv-python-headless",
+  "rembg",
+  "onnxruntime",
+  "boto3",
+  "tqdm",
+  "torch",
+  "torchvision",
+]
+
+[dependency-groups]
+dev = ["pytest", "moto[s3]"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = ["slow: requires model download / heavy compute"]
