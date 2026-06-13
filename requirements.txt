@@ -1,0 +1,19 @@
+# Pinned to what the prototype (sharwani_large.ipynb) uses:
+#   transformers AutoProcessor + AutoModel for google/siglip-base-patch16-224
+#   opencv-python for SIFT + highpass trace (later steps)
+#   rembg + onnxruntime for U2Net background removal (later steps)
+#   numpy for the embeds matrix; pillow for image decode
+fastapi
+uvicorn[standard]
+python-multipart
+transformers
+sentencepiece
+pillow
+numpy
+# MySQL connector (Step 2 — indexer + boot-time loader):
+pymysql
+tqdm
+# Search pipeline (Step 3+):
+opencv-python-headless
+rembg
+onnxruntime
