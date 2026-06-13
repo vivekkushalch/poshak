@@ -1,11 +1,12 @@
-"""Image I/O helpers — port of the prototype's `load_image`,
-`find_actual_file`, `ensure_image`.
+"""Image I/O helpers — port of the prototype's `load_image` and
+`find_actual_file`.
 
 Matches the notebook's behavior exactly:
   - load_image returns a uint8 RGB ndarray (cv2 BGR → RGB)
   - find_actual_file does graceful extension fuzzing so a `.jpg` listed
     in MySQL still resolves when the on-disk file is `.JPEG` or `.png`
-  - ensure_image is the lazy loader used inside the search loop
+  - to_working_res scales by HEIGHT to max_h (default config.WORKING_MAX_H),
+    proportional, INTER_AREA — only shrinks, never crops or distorts
 """
 
 import glob
@@ -16,7 +17,7 @@ from typing import Optional
 import cv2
 import numpy as np
 
-from .highpass import highpass_trace
+from . import config
 
 
 def load_image(path: str) -> Optional[np.ndarray]:
@@ -24,26 +25,6 @@ def load_image(path: str) -> Optional[np.ndarray]:
     if img is None:
         return None
     return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-
-def _resize_max(img: np.ndarray, max_dim: int) -> np.ndarray:
-    """Cap the longer side at max_dim. SIFT is scale-invariant, so
-    downsizing candidates for SIFT doesn't hurt match counts much
-    but drops decoded RAM 4-9x for typical phone photos."""
-    h, w = img.shape[:2]
-    longer = max(h, w)
-    if longer <= max_dim:
-        return img
-    scale = max_dim / float(longer)
-    new_w = max(1, int(round(w * scale)))
-    new_h = max(1, int(round(h * scale)))
-    return cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
-
-
-# Cap candidate / query images used in SIFT to this many px on the
-# longer side. 800 keeps fine-detail features (embroidery, weave) while
-# making each decoded image ~2MB instead of 10-15MB.
-SIFT_MAX_DIM = 800
 
 
 def find_actual_file(source_dir: Path, filename: str) -> Optional[str]:
@@ -64,29 +45,13 @@ def find_actual_file(source_dir: Path, filename: str) -> Optional[str]:
     return matches[0] if matches else None
 
 
-def ensure_image(entry: dict) -> Optional[np.ndarray]:
-    """Load a candidate image for SIFT. Returns full-resolution RGB
-    (matches the prototype — downsizing destroys SIFT distinctiveness
-    at scale).
-
-    Self-healing: if the stored path doesn't exist (e.g., stock.photos
-    CSV said "abc.jpg" but disk has "abc.JPEG" — Linux is case-sensitive
-    so the exact path fails), retry with extension fuzzing and cache
-    the corrected path back on the entry so next time is fast.
-
-    We deliberately do NOT cache the decoded image — that grew RAM
-    unboundedly across searches. The highpass trace IS cached (~50KB).
-    """
-    img = load_image(entry["path"])
-    if img is None:
-        p = Path(entry["path"])
-        resolved = find_actual_file(p.parent, p.name)
-        if resolved is None:
-            return None
-        entry["path"] = resolved
-        img = load_image(resolved)
-        if img is None:
-            return None
-    if entry.get("trace") is None:
-        entry["trace"] = highpass_trace(img)
-    return img
+# Port of spipeline.py load_image (max_h=768): scale by HEIGHT, INTER_AREA,
+# only when taller than max_h. Proportional — never crops or distorts.
+def to_working_res(img: np.ndarray, max_h: int | None = None) -> np.ndarray:
+    max_h = config.WORKING_MAX_H if max_h is None else max_h
+    h, w = img.shape[:2]
+    if h <= max_h:
+        return img
+    scale = max_h / float(h)
+    new_w = max(1, int(w * scale))
+    return cv2.resize(img, (new_w, max_h), interpolation=cv2.INTER_AREA)
