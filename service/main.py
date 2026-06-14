@@ -5,11 +5,13 @@ import gc
 import cv2
 import numpy as np
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 
 from . import config
 from .auth import require_api_key
 from .debug import dbg
+from .manage import add_image, replace_image, forget_image
 from .search import fabric_search, unified_cloth_search
 from .store import STORE
 
@@ -25,6 +27,12 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="poshak image-search", version="0.2.0", lifespan=lifespan)
+
+
+def _safe_name(name: str) -> str:
+    if not name or "/" in name or "\\" in name or ".." in name:
+        raise HTTPException(status_code=400, detail="invalid photo_name")
+    return name
 
 
 def _decode_rgb(data: bytes) -> np.ndarray:
@@ -81,3 +89,30 @@ async def search(image: UploadFile = File(...), category: str = Form(...),
                     "best_entry": _entry_to_result(best)})
     return {"status": "success", "method": "SIFT", "category": category,
             "total_found": len(out), "results": out, "model_tag": config.MODEL_TAG}
+
+
+@app.post("/ingest", dependencies=[Depends(require_api_key)])
+async def ingest(image: UploadFile = File(...), sku_id: int = Form(...),
+                 designno: str = Form(""), item: str = Form(...),
+                 photo_name: str = Form(...)):
+    photo_name = _safe_name(photo_name)
+    data = await image.read()
+    res = add_image(sku_id=sku_id, designno=designno, item=item,
+                    photo_name=photo_name, data=data)
+    return JSONResponse(res, status_code=202)
+
+
+@app.post("/replace", dependencies=[Depends(require_api_key)])
+async def replace(image: UploadFile = File(...), photo_name: str = Form(...),
+                  kind: str = Form(...)):
+    photo_name = _safe_name(photo_name)
+    if kind not in ("original", "rmbg"):
+        raise HTTPException(status_code=400, detail="kind must be original or rmbg")
+    data = await image.read()
+    return replace_image(photo_name, kind=kind, data=data)
+
+
+@app.post("/forget", dependencies=[Depends(require_api_key)])
+def forget(photo_name: str = Form(...)):
+    photo_name = _safe_name(photo_name)
+    return {"status": "ok", "photo_name": photo_name, **forget_image(photo_name)}
