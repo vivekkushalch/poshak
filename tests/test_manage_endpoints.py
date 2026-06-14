@@ -1,5 +1,19 @@
 from fastapi.testclient import TestClient
 from service import main, config
+from service.store import connect
+
+
+def test_startup_creates_job_tables(tmp_path, monkeypatch):
+    db = tmp_path / "index.sqlite"
+    monkeypatch.setattr(config, "DATA_ROOT", tmp_path)
+    monkeypatch.setattr(config, "SQLITE_PATH", db)
+    monkeypatch.setattr(config, "DISABLE_AUTH", True)
+    with TestClient(main.app):   # triggers lifespan startup
+        pass
+    with connect(str(db)) as c:
+        names = {r[0] for r in c.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+    assert {"images", "index_jobs", "index_job_items"} <= names
 
 
 def test_ingest_stages_and_enqueues(tmp_path, monkeypatch):

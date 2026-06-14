@@ -16,11 +16,20 @@ from .auth import require_api_key
 from .debug import dbg
 from .manage import replace_image, forget_image
 from .search import fabric_search, unified_cloth_search
-from .store import STORE, list_skus, list_jobs, get_job
+from .store import STORE, init_db, list_skus, list_jobs, get_job
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Ensure the schema (images + job tables, plus legacy migration) exists on
+    # the live DB before anything reads/writes it — a pre-existing index.sqlite
+    # from an older build won't have the index_jobs tables otherwise.
+    try:
+        config.DATA_ROOT.mkdir(parents=True, exist_ok=True)
+        init_db(str(config.SQLITE_PATH))
+        print("[startup] schema ensured")
+    except Exception as e:
+        print(f"[startup] init_db failed: {e}")
     try:
         stats = STORE.load(str(config.SQLITE_PATH), config.MODEL_TAG)
         print(f"[startup] index loaded: {stats}")
