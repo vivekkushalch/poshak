@@ -9,7 +9,7 @@ ENV VIRTUAL_ENV=/opt/venv PATH="/opt/venv/bin:$PATH"
 RUN uv pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision
 RUN uv pip install \
       fastapi "uvicorn[standard]" python-multipart transformers sentencepiece \
-      pillow numpy opencv-python-headless rembg onnxruntime boto3 tqdm
+      pillow numpy opencv-python-headless rembg onnxruntime httpx tqdm
 
 # ---- runtime: slim Debian + venv + code + baked model ----------------------
 FROM python:3.11-slim
