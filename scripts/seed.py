@@ -14,9 +14,8 @@ from service import config
 from service.store import init_db, connect, upsert_image
 from service.image_io import to_working_res
 from service.descriptors import compute_descriptors, save_descriptors
-from service.bg_removal import remove_bg_rembg
+from service.bg_remove import remove_bg_for_index
 from service.model import siglip_embed
-from service.s3 import get_bytes as s3_get
 
 
 def decode_768(data: bytes) -> np.ndarray:
@@ -33,8 +32,8 @@ def compute_desc(img):     # seam for tests
     return compute_descriptors(img)
 
 
-def rembg_fullsize(img):   # seam for tests
-    return remove_bg_rembg(img)
+def rembg_fullsize(img):   # seam for tests -> (rgb_on_gray, engine_used)
+    return remove_bg_for_index(img)
 
 
 def _categorize(item: str):
@@ -91,13 +90,10 @@ def run(skus: list) -> dict:
 
         local = config.CORPUS_DIR / photo
         if not local.exists():
-            data = s3_get(config.S3_UPLOADS_PREFIX + photo)
-            if data is None:
-                stats["missing"] += 1
-                pbar.update(step)
-                _refresh()
-                continue
-            local.write_bytes(data)
+            stats["missing"] += 1
+            pbar.update(step)
+            _refresh()
+            continue
         orig768 = decode_768(local.read_bytes())
         orig_vec = embed(orig768)
         stats["embeds"] += 1
@@ -106,19 +102,15 @@ def run(skus: list) -> dict:
         orig_desc = str(config.DESC_DIR / f"{photo}.orig.npz")
         save_descriptors(orig_desc, des, n)
 
-        rembg_name = rembg_vec = rembg_desc = None
+        rembg_name = rembg_vec = rembg_desc = bg_engine = None
         if category == "cloth":
             base = os.path.splitext(photo)[0]
             rembg_name = f"{base}.png"
             rpath = config.RMBG_DIR / rembg_name
             if not rpath.exists():
-                rdata = s3_get(config.S3_RMBG_PREFIX + rembg_name)
-                if rdata is not None:
-                    rpath.write_bytes(rdata)
-                else:
-                    full = decode_full(local.read_bytes())
-                    bg = rembg_fullsize(full)
-                    cv2.imwrite(str(rpath), cv2.cvtColor(bg, cv2.COLOR_RGB2BGR))
+                full = decode_full(local.read_bytes())
+                bg, bg_engine = rembg_fullsize(full)
+                cv2.imwrite(str(rpath), cv2.cvtColor(bg, cv2.COLOR_RGB2BGR))
             rimg768 = to_working_res(_load_rgb(str(rpath)))
             rembg_vec = embed(rimg768)
             stats["embeds"] += 1
@@ -130,7 +122,7 @@ def run(skus: list) -> dict:
         upsert_image(str(config.SQLITE_PATH), sku["stock_id"],
                      sku.get("designno", ""), sku.get("item", ""), category,
                      photo, rembg_name, orig_vec, rembg_vec,
-                     orig_desc, rembg_desc, config.MODEL_TAG)
+                     orig_desc, rembg_desc, config.MODEL_TAG, bg_engine)
         stats["done"] += 1
         _refresh()
 
