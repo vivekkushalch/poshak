@@ -14,10 +14,7 @@ services:
       CORPUS_DIR: /corpus/uploads
       RMBG_DIR: /corpus/rmbg
       IMAGE_BASE_URL: ${IMAGE_BASE_URL:-}
-      S3_BUCKET: ${S3_BUCKET:-}
-      S3_REGION: ${S3_REGION:-ap-south-1}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      REMBG_API_URL: ${REMBG_API_URL:-https://rembg.example.com}
     volumes:
       - ./service:/app/service          # live edit
       - ./scripts:/app/scripts

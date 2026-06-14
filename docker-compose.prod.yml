@@ -1,4 +1,5 @@
-# SERVER (Lightsail): pull the published image; persistent host volumes; secrets via env.
+# SERVER (Lightsail): pull the published image; HOST bind-mounts so all state
+# lives under ~/poshak and survives container/volume loss (backup = tar ~/poshak).
 #   docker compose -f docker-compose.prod.yml pull && up -d
 services:
   image-search:
@@ -13,13 +14,12 @@ services:
       DATA_ROOT: /data
       CORPUS_DIR: /corpus/uploads
       RMBG_DIR: /corpus/rmbg
+      REMBG_API_URL: ${REMBG_API_URL:-https://rembg.example.com}
     volumes:
-      - data:/data                      # sqlite + descriptors + ledger (persists across deploys)
-      - corpus:/corpus                  # uploads + rmbg (local-first store)
+      - ${POSHAK_HOME:-/home/ubuntu/poshak}/data:/data
+      - ${POSHAK_HOME:-/home/ubuntu/poshak}/corpus:/corpus
       - models:/models
     mem_limit: 2g
     mem_reservation: 512m
 volumes:
-  data:
-  corpus:
   models:
