@@ -16,3 +16,17 @@ def test_paths_and_env(monkeypatch):
     assert cfg.CLOTH_ITEMS == {
         "Sherwani", "Indowestern", "Bandhgala", "Tuxedo", "Jacket", "Bomber Jacket"
     }
+
+
+def test_rembg_api_defaults(monkeypatch):
+    for k in ("REMBG_API_URL", "REMBG_API_TIMEOUT", "REMBG_API_RETRIES",
+              "REMBG_DEFAULT_ENGINE"):
+        monkeypatch.delenv(k, raising=False)
+    import importlib
+    from service import config as cfg
+    importlib.reload(cfg)
+    assert cfg.REMBG_API_URL == "https://rembg.example.com"
+    assert cfg.REMBG_API_TIMEOUT == 360
+    assert cfg.REMBG_API_RETRIES == 1
+    assert cfg.REMBG_DEFAULT_ENGINE == "auto"
+    assert not hasattr(cfg, "S3_BUCKET")

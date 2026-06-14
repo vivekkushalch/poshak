@@ -57,11 +57,17 @@ LEDGER_PATH = Path(os.environ.get("LEDGER_PATH", str(DATA_ROOT / "pending_sync.j
 # --- corpus (local-first; seeded from S3) ----------------------------------
 RMBG_DIR = Path(os.environ.get("RMBG_DIR", "/corpus/rmbg"))
 
-# --- S3 cold-start source --------------------------------------------------
-S3_BUCKET = os.environ.get("S3_BUCKET", "")
-S3_REGION = os.environ.get("S3_REGION", "ap-south-1")
-S3_UPLOADS_PREFIX = os.environ.get("S3_UPLOADS_PREFIX", "uploads/")
-S3_RMBG_PREFIX = os.environ.get("S3_RMBG_PREFIX", "rmbg/")
+# --- external background-removal API (indexing only; primary) --------------
+# birefnet-general behind https://rembg.example.com ; slow single worker.
+# Per image: REMBG_API_TIMEOUT seconds, REMBG_API_RETRIES retries, then the
+# local U2Net rembg is used as a per-image fallback. Search-path query
+# bg-removal always stays local (see service/bg_removal.py).
+REMBG_API_URL = os.environ.get("REMBG_API_URL", "https://rembg.example.com")
+REMBG_API_TIMEOUT = int(os.environ.get("REMBG_API_TIMEOUT", "360"))
+REMBG_API_RETRIES = int(os.environ.get("REMBG_API_RETRIES", "1"))
+REMBG_DEFAULT_ENGINE = os.environ.get("REMBG_DEFAULT_ENGINE", "auto")  # auto|api|local
+# Optional: downscale (by height) before upload to cut inference time. 0 = off.
+REMBG_API_MAX_H = int(os.environ.get("REMBG_API_MAX_H", "0"))
 
 # --- frontend display ------------------------------------------------------
 # Public base; frontends build f"{IMAGE_BASE_URL}/uploads/<file>" etc.

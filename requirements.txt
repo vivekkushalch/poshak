@@ -17,3 +17,5 @@ tqdm
 opencv-python-headless
 rembg
 onnxruntime
+# External bg-removal API client (indexing primary):
+httpx
