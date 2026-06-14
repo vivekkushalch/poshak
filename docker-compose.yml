@@ -1,58 +1,28 @@
-# Stands up the poshak image-search Python service.
-#
-# Usage:
-#   cd image-search-python-service
+# DEV: build locally, live-edit source, local data dirs.
 #   docker compose up -d --build
 #   curl http://localhost:8088/health
-#
-# The PHP frontend (a local PHP server, image-search/search.php) calls this via
-# EMBED_SERVICE_URL in image-search/config.php.
 services:
   image-search:
     build: .
-    image: poshak:latest
-    container_name: poshak
-    restart: unless-stopped
+    image: poshak:dev
+    container_name: poshak-dev
     ports:
       - "8088:8088"
     environment:
-      # MySQL — defaults match a local PHP server on Windows (root, no password, db=poshak).
-      # Override for prod (the web host your_db_name).
-      DB_HOST: host.docker.internal
-      DB_PORT: "3306"
-      DB_NAME: poshak
-      DB_USER: root
-      DB_PASS: ""
-      # rembg's U2Net weights (~170MB). Persist into the same volume the
-      # transformers cache lives in, so a docker compose down/up doesn't
-      # re-download on first bg_remove_batch run.
-      U2NET_HOME: /models/u2net
-    # Linux Docker doesn't auto-resolve host.docker.internal; this line makes
-    # it work everywhere. Windows / Mac Docker Desktop already provide it.
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      DISABLE_AUTH: "1"
+      DATA_ROOT: /data
+      CORPUS_DIR: /corpus/uploads
+      RMBG_DIR: /corpus/rmbg
+      IMAGE_BASE_URL: ${IMAGE_BASE_URL:-}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_REGION: ${S3_REGION:-ap-south-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
     volumes:
-      # DEV: bind-mount the source so edits are picked up without a rebuild.
-      # Comment these two out for prod-image builds.
-      - ./service:/app/service
+      - ./service:/app/service          # live edit
       - ./scripts:/app/scripts
-      # Persist downloaded model weights across container rebuilds.
+      - ./.localdata:/data              # sqlite + descriptors + ledger
+      - ./.localcorpus:/corpus          # uploads + rmbg
       - models:/models
-      # Mirror the live uploads/ folder into the container read-only.
-      # On Windows + Docker Desktop this is a bind mount of the a local PHP server
-      # htdocs path; switch to a remote mount / rsync when deployed to
-      # AWS (PHP-side uploads/ won't be on the same disk).
-      - c:/a local PHP server/htdocs/poshak/uploads:/corpus/uploads:ro
-      # data/ holds bg-removed cloth PNGs. The bg-removal CLI (Step 3)
-      # writes here; the service reads from here at index/search time.
-      - c:/a local PHP server/htdocs/poshak/image-search-python-service/data:/corpus/data
-    # Bumped back to 6GB. The 4GB cap forced downsizing of candidate
-    # images for SIFT, which silently destroyed match quality at scale
-    # (fine-detail features in embroidery / weave are what separate
-    # near-identical sherwanis). With 8GB available on the host, 6GB
-    # is the right trade — full-res SIFT, matches the prototype.
-    mem_limit: 6g
-    mem_reservation: 2g
-
 volumes:
   models:

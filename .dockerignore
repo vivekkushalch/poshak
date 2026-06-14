@@ -1,9 +1,31 @@
-__pycache__
+# caches / venvs
+__pycache__/
 *.pyc
-.venv
-venv
-data
-tests
-spipeline*.py
-*.ipynb
+.venv/
+venv/
+.pytest_cache/
+
+# data, models, local state — never baked into the public image
+data/
+corpus/
+.localdata/
+.localcorpus/
+*.sqlite
+*.npz
+
+# PII / dumps / prototype / docs — must NOT ship in a public image
+poshak.sql
+*.sql
 sku-image-map.json
+*.json
+*.ipynb
+spipeline*.py
+idea.md
+docs/
+tests/
+
+# secrets / vcs / ci
+.env
+.env.*
+.git/
+.github/

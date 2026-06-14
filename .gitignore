@@ -8,4 +8,7 @@ __pycache__/
 *.npz
 .env
 .env.*
+!.env.example
 *.sql
+.localdata/
+.localcorpus/

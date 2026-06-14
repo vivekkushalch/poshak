@@ -1,0 +1,25 @@
+# SERVER (Lightsail): pull the published image; persistent host volumes; secrets via env.
+#   docker compose -f docker-compose.prod.yml pull && up -d
+services:
+  image-search:
+    image: kent997/poshak:latest
+    container_name: poshak
+    restart: unless-stopped
+    pull_policy: always
+    ports:
+      - "8088:8088"
+    env_file: .env
+    environment:
+      DATA_ROOT: /data
+      CORPUS_DIR: /corpus/uploads
+      RMBG_DIR: /corpus/rmbg
+    volumes:
+      - data:/data                      # sqlite + descriptors + ledger (persists across deploys)
+      - corpus:/corpus                  # uploads + rmbg (local-first store)
+      - models:/models
+    mem_limit: 2g
+    mem_reservation: 512m
+volumes:
+  data:
+  corpus:
+  models:
