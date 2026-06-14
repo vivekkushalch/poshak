@@ -5,7 +5,7 @@ import gc
 import cv2
 import numpy as np
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from contextlib import asynccontextmanager
 
 from . import config
@@ -13,7 +13,7 @@ from .auth import require_api_key
 from .debug import dbg
 from .manage import add_image, replace_image, forget_image
 from .search import fabric_search, unified_cloth_search
-from .store import STORE
+from .store import STORE, list_skus
 
 
 @asynccontextmanager
@@ -116,3 +116,26 @@ async def replace(image: UploadFile = File(...), photo_name: str = Form(...),
 def forget(photo_name: str = Form(...)):
     photo_name = _safe_name(photo_name)
     return {"status": "ok", "photo_name": photo_name, **forget_image(photo_name)}
+
+
+@app.get("/skus", dependencies=[Depends(require_api_key)])
+def skus(page: int = 1, page_size: int = 50):
+    return list_skus(str(config.SQLITE_PATH), config.MODEL_TAG, page, page_size)
+
+
+@app.get("/img/original/{name}")
+def img_original(name: str):
+    name = _safe_name(name)
+    path = config.CORPUS_DIR / name
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="not found")
+    return FileResponse(str(path))
+
+
+@app.get("/img/rmbg/{name}")
+def img_rmbg(name: str):
+    name = _safe_name(name)
+    path = config.RMBG_DIR / name
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="not found")
+    return FileResponse(str(path))

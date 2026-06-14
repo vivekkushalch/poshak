@@ -135,4 +135,17 @@ class IndexStore:
                 "fabric": len(self.fabric), "model_tag": config.MODEL_TAG}
 
 
+def list_skus(db_path: str, model_tag: str, page: int, page_size: int) -> dict:
+    offset = (max(1, page) - 1) * page_size
+    with connect(db_path) as conn:
+        total = conn.execute(
+            "SELECT COUNT(*) FROM images WHERE model_tag=?", (model_tag,)).fetchone()[0]
+        rows = conn.execute(
+            "SELECT sku_id, item, designno, photo_name, rembg_name FROM images "
+            "WHERE model_tag=? ORDER BY id LIMIT ? OFFSET ?",
+            (model_tag, page_size, offset)).fetchall()
+    items = [dict(r) for r in rows]
+    return {"total": total, "page": page, "page_size": page_size, "items": items}
+
+
 STORE = IndexStore()
