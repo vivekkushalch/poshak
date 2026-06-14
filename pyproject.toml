@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pytest", "moto[s3]"]
+dev = ["pytest", "moto[s3]", "httpx"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

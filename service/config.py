@@ -71,3 +71,8 @@ IMAGE_BASE_URL = os.environ.get("IMAGE_BASE_URL", "")
 # --- memory management -----------------------------------------------------
 # Periodic gc + cuda cache flush keeps RSS flat over thousands of calls.
 GC_EVERY_N_REQUESTS = int(os.environ.get("GC_EVERY", "50"))
+
+
+# --- auth ------------------------------------------------------------------
+API_KEY = os.environ.get("API_KEY", "")
+DISABLE_AUTH = os.environ.get("DISABLE_AUTH", "0") == "1"

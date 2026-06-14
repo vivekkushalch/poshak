@@ -29,6 +29,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "httpx" },
     { name = "moto", extra = ["s3"] },
     { name = "pytest" },
 ]
@@ -53,6 +54,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "httpx" },
     { name = "moto", extras = ["s3"] },
     { name = "pytest" },
 ]
