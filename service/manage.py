@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 
 from . import config, ledger
-from .bg_removal import remove_bg_rembg
+from .bg_remove import remove_bg_for_index
 from .descriptors import compute_descriptors, load_descriptors, save_descriptors
 from .image_io import to_working_res
 from .model import siglip_embed
@@ -27,8 +27,15 @@ def _desc(img):
     return compute_descriptors(img)
 
 
-def _rembg(img):
-    return remove_bg_rembg(img)
+def _bg(img, engine):
+    return remove_bg_for_index(img, engine=engine)
+
+
+def _load_original(photo_name) -> np.ndarray:
+    img = cv2.imread(str(config.CORPUS_DIR / photo_name))
+    if img is None:
+        raise FileNotFoundError(f"original not on disk: {photo_name}")
+    return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
 
 def _decode_full(data: bytes) -> np.ndarray:
@@ -50,14 +57,22 @@ def _categorize(item: str):
     return None
 
 
+def _already_indexed(photo_name) -> bool:
+    with connect(str(config.SQLITE_PATH)) as c:
+        r = c.execute(
+            "SELECT orig_desc FROM images WHERE photo_name=? AND model_tag=?",
+            (photo_name, config.MODEL_TAG)).fetchone()
+    return bool(r and r[0] and os.path.exists(r[0]))
+
+
 def _reload_store():
     init_db(str(config.SQLITE_PATH))
     load_descriptors.cache_clear()
     STORE.load(str(config.SQLITE_PATH), config.MODEL_TAG)
 
 
-def _build_descriptors_for(photo_name, full_img, category):
-    """Returns (rembg_name, orig_vec, rembg_vec, orig_desc, rembg_desc).
+def _build_descriptors_for(photo_name, full_img, category, engine):
+    """Returns (rembg_name, orig_vec, rembg_vec, orig_desc, rembg_desc, bg_engine).
     full_img is the full-size original RGB."""
     config.DESC_DIR.mkdir(parents=True, exist_ok=True)
     orig768 = to_working_res(full_img)
@@ -66,13 +81,13 @@ def _build_descriptors_for(photo_name, full_img, category):
     orig_desc = str(config.DESC_DIR / f"{photo_name}.orig.npz")
     save_descriptors(orig_desc, odes, on)
 
-    rembg_name = rembg_vec = rembg_desc = None
+    rembg_name = rembg_vec = rembg_desc = bg_engine = None
     if category == "cloth":
         config.RMBG_DIR.mkdir(parents=True, exist_ok=True)
         base = os.path.splitext(photo_name)[0]
         rembg_name = f"{base}.png"
         rpath = config.RMBG_DIR / rembg_name
-        bg_full = _rembg(full_img)
+        bg_full, bg_engine = _bg(full_img, engine)
         cv2.imwrite(str(rpath), cv2.cvtColor(bg_full, cv2.COLOR_RGB2BGR))
         ledger.record("replace", "rmbg", rembg_name, _now())
         rimg768 = to_working_res(bg_full)
@@ -80,23 +95,40 @@ def _build_descriptors_for(photo_name, full_img, category):
         rdes, rn = _desc(rimg768)
         rembg_desc = str(config.DESC_DIR / f"{photo_name}.rmbg.npz")
         save_descriptors(rembg_desc, rdes, rn)
-    return rembg_name, orig_vec, rembg_vec, orig_desc, rembg_desc
+    return rembg_name, orig_vec, rembg_vec, orig_desc, rembg_desc, bg_engine
 
 
-def add_image(sku_id, designno, item, photo_name, data: bytes) -> dict:
+def index_one(sku_id, designno, item, photo_name, *, engine="auto",
+              force=False, reload=True) -> dict:
+    """Index a single ALREADY-STAGED original (in CORPUS_DIR). Shared by
+    /ingest, the job worker, and seed."""
     category = _categorize(item)
     if category is None:
         return {"status": "skipped", "reason": f"item {item!r} not routed"}
+    if not force and _already_indexed(photo_name):
+        return {"status": "skipped", "reason": "already indexed",
+                "photo_name": photo_name}
     with _LOCK:
-        config.CORPUS_DIR.mkdir(parents=True, exist_ok=True)
-        (config.CORPUS_DIR / photo_name).write_bytes(data)
-        ledger.record("add", "original", photo_name, _now())
-        full = _decode_full(data)
-        rembg_name, ov, rv, od, rd = _build_descriptors_for(photo_name, full, category)
+        full = _load_original(photo_name)
+        rembg_name, ov, rv, od, rd, bg_engine = _build_descriptors_for(
+            photo_name, full, category, engine)
         upsert_image(str(config.SQLITE_PATH), sku_id, designno, item, category,
-                     photo_name, rembg_name, ov, rv, od, rd, config.MODEL_TAG)
-        _reload_store()
-    return {"status": "indexed", "photo_name": photo_name, "category": category}
+                     photo_name, rembg_name, ov, rv, od, rd, config.MODEL_TAG,
+                     bg_engine)
+        if reload:
+            _reload_store()
+    return {"status": "indexed", "photo_name": photo_name,
+            "category": category, "bg_engine": bg_engine}
+
+
+def add_image(sku_id, designno, item, photo_name, data: bytes) -> dict:
+    """Stage bytes to disk then index synchronously (single-call path)."""
+    if _categorize(item) is None:
+        return {"status": "skipped", "reason": f"item {item!r} not routed"}
+    config.CORPUS_DIR.mkdir(parents=True, exist_ok=True)
+    (config.CORPUS_DIR / photo_name).write_bytes(data)
+    ledger.record("add", "original", photo_name, _now())
+    return index_one(sku_id, designno, item, photo_name, reload=True)
 
 
 def replace_image(photo_name, kind: str, data: bytes) -> dict:
@@ -115,10 +147,11 @@ def replace_image(photo_name, kind: str, data: bytes) -> dict:
             (config.CORPUS_DIR / photo_name).write_bytes(data)
             ledger.record("replace", "original", photo_name, _now())
             full = _decode_full(data)
-            rembg_name, ov, rv, od, rd = _build_descriptors_for(
-                photo_name, full, category)
+            rembg_name, ov, rv, od, rd, bg_engine = _build_descriptors_for(
+                photo_name, full, category, "auto")
             upsert_image(str(config.SQLITE_PATH), sku_id, designno, item, category,
-                         photo_name, rembg_name, ov, rv, od, rd, config.MODEL_TAG)
+                         photo_name, rembg_name, ov, rv, od, rd, config.MODEL_TAG,
+                         bg_engine)
         else:  # replace just the rmbg image
             base = os.path.splitext(photo_name)[0]
             rembg_name = f"{base}.png"
@@ -135,7 +168,7 @@ def replace_image(photo_name, kind: str, data: bytes) -> dict:
                               (photo_name, config.MODEL_TAG)).fetchone()
             upsert_image(str(config.SQLITE_PATH), sku_id, designno, item, category,
                          photo_name, rembg_name, blob_to_vec(r[0]), rv,
-                         r[1], rd, config.MODEL_TAG)
+                         r[1], rd, config.MODEL_TAG, "manual")
         _reload_store()
     return {"status": "replaced", "photo_name": photo_name, "kind": kind}
 
