@@ -1,6 +1,7 @@
 """FastAPI app on the local SQLite + precomputed-descriptor engine."""
 
 import gc
+import uuid
 from pathlib import Path
 
 import cv2
@@ -10,12 +11,12 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 
-from . import config
+from . import config, jobs
 from .auth import require_api_key
 from .debug import dbg
-from .manage import add_image, replace_image, forget_image
+from .manage import replace_image, forget_image
 from .search import fabric_search, unified_cloth_search
-from .store import STORE, list_skus
+from .store import STORE, list_skus, list_jobs, get_job
 
 
 @asynccontextmanager
@@ -25,6 +26,12 @@ async def lifespan(app: FastAPI):
         print(f"[startup] index loaded: {stats}")
     except Exception as e:
         print(f"[startup] index load skipped: {e}")
+    try:
+        jobs.start()
+        jobs.resume()
+        print("[startup] index worker started")
+    except Exception as e:
+        print(f"[startup] index worker not started: {e}")
     yield
 
 
@@ -113,12 +120,19 @@ async def search(image: UploadFile = File(...), category: str = Form(...),
 @app.post("/ingest", dependencies=[Depends(require_api_key)])
 async def ingest(image: UploadFile = File(...), sku_id: int = Form(...),
                  designno: str = Form(""), item: str = Form(...),
-                 photo_name: str = Form(...)):
+                 photo_name: str = Form(...), batch_id: str = Form(""),
+                 bg_engine: str = Form("auto"), force: bool = Form(False)):
     photo_name = _safe_name(photo_name)
+    if bg_engine not in ("auto", "api", "local"):
+        raise HTTPException(status_code=400,
+                            detail="bg_engine must be auto, api or local")
+    batch_id = batch_id or uuid.uuid4().hex
     data = await image.read()
-    res = add_image(sku_id=sku_id, designno=designno, item=item,
-                    photo_name=photo_name, data=data)
-    return JSONResponse(res, status_code=202)
+    config.CORPUS_DIR.mkdir(parents=True, exist_ok=True)
+    (config.CORPUS_DIR / photo_name).write_bytes(data)
+    jobs.submit(batch_id, photo_name, sku_id, designno, item, bg_engine, force)
+    return JSONResponse({"batch_id": batch_id, "photo_name": photo_name,
+                         "queued": True}, status_code=202)
 
 
 @app.post("/replace", dependencies=[Depends(require_api_key)])
@@ -140,6 +154,19 @@ def forget(photo_name: str = Form(...)):
 @app.get("/skus", dependencies=[Depends(require_api_key)])
 def skus(page: int = 1, page_size: int = 50):
     return list_skus(str(config.SQLITE_PATH), config.MODEL_TAG, page, page_size)
+
+
+@app.get("/index/jobs", dependencies=[Depends(require_api_key)])
+def index_jobs():
+    return {"jobs": list_jobs(str(config.SQLITE_PATH))}
+
+
+@app.get("/index/jobs/{batch_id}", dependencies=[Depends(require_api_key)])
+def index_job(batch_id: str):
+    job = get_job(str(config.SQLITE_PATH), batch_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="job not found")
+    return job
 
 
 @app.get("/img/original/{name}")
