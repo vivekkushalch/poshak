@@ -1,0 +1,22 @@
+* { box-sizing: border-box; font-family: system-ui, sans-serif; }
+body { margin: 0; padding: 16px; background: #f6f7f9; color: #1c2230; }
+h1 { font-size: 20px; }
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+button { padding: 8px 14px; border: 0; border-radius: 8px; background: #2b6cb0;
+  color: #fff; cursor: pointer; }
+button.secondary { background: #718096; }
+.card { background: #fff; border-radius: 12px; padding: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.results { display: grid; gap: 12px; margin-top: 16px; }
+.result { display: grid; grid-template-columns: 120px 1fr; gap: 12px; align-items: center; }
+.result.top { outline: 3px solid #38a169; }
+.result img { width: 120px; height: 120px; object-fit: cover; border-radius: 8px; cursor: pointer; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top: 16px; }
+.cell img { width: 100%; height: 160px; object-fit: cover; border-radius: 8px; }
+.cell .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.score { font-weight: 700; color: #2f855a; }
+.muted { color: #718096; font-size: 13px; }
+.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: none;
+  align-items: center; justify-content: center; z-index: 50; }
+.lightbox.open { display: flex; }
+.lightbox img { max-width: 92vw; max-height: 92vh; border-radius: 8px; }
+.pager { display: flex; gap: 8px; align-items: center; margin-top: 16px; }

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>poshak image search — test</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <h1>poshak image search — test</h1>
+  <div class="card">
+    <div class="row">
+      <input id="file" type="file" accept="image/*" capture="environment" />
+      <select id="category">
+        <option value="cloth">cloth</option>
+        <option value="fabric">fabric</option>
+      </select>
+      <label>top_k <input id="topk" type="number" value="5" min="1" max="20" style="width:60px" /></label>
+      <button id="go">Search</button>
+      <span id="status" class="muted"></span>
+    </div>
+  </div>
+  <div id="results" class="results"></div>
+  <div id="lightbox" class="lightbox"><img id="lightbox-img" alt="full" /></div>
+  <script type="module" src="/static/ui.js"></script>
+</body>
+</html>

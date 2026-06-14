@@ -1,11 +1,13 @@
 """FastAPI app on the local SQLite + precomputed-descriptor engine."""
 
 import gc
+from pathlib import Path
 
 import cv2
 import numpy as np
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 
 from . import config
@@ -27,6 +29,23 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="poshak image-search", version="0.2.0", lifespan=lifespan)
+
+_STATIC = Path(__file__).resolve().parent / "static"
+app.mount("/static", StaticFiles(directory=str(_STATIC)), name="static")
+
+
+def _page(name: str) -> HTMLResponse:
+    return HTMLResponse((_STATIC / name).read_text(encoding="utf-8"))
+
+
+@app.get("/ui", response_class=HTMLResponse)
+def ui_page():
+    return _page("ui.html")
+
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin_page():
+    return _page("admin.html")
 
 
 def _safe_name(name: str) -> str:
