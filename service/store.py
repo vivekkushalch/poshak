@@ -57,6 +57,12 @@ CREATE TABLE IF NOT EXISTS index_job_items (
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(batch_id, photo_name)
 );
+CREATE TABLE IF NOT EXISTS item_categories (
+  item       TEXT PRIMARY KEY,
+  category   TEXT NOT NULL,
+  source     TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 """
 
 
@@ -66,12 +72,73 @@ def connect(db_path: str) -> sqlite3.Connection:
     return conn
 
 
+def _seed_item_categories(conn) -> None:
+    """INSERT OR IGNORE the config sets so a fresh DB knows the baseline items.
+    OR IGNORE means an existing learned ('inferred') or 'manual' row is never
+    clobbered, so this is safe to re-run on every startup."""
+    rows = ([(it, "cloth", "config") for it in config.CLOTH_ITEMS] +
+            [(it, "fabric", "config") for it in config.FABRIC_ITEMS])
+    conn.executemany(
+        "INSERT OR IGNORE INTO item_categories (item, category, source) "
+        "VALUES (?, ?, ?)", rows)
+
+
 def init_db(db_path: str) -> None:
     with connect(db_path) as conn:
         conn.executescript(SCHEMA)
         cols = [r[1] for r in conn.execute("PRAGMA table_info(images)").fetchall()]
         if "bg_engine" not in cols:
             conn.execute("ALTER TABLE images ADD COLUMN bg_engine TEXT")
+        _seed_item_categories(conn)
+        conn.commit()
+
+
+def infer_category(item: str) -> str:
+    """Heuristic fallback for an item type not yet in item_categories:
+    anything whose name contains 'fabric' routes to the fabric pipeline,
+    everything else to cloth. Never returns None."""
+    return "fabric" if "fabric" in (item or "").strip().lower() else "cloth"
+
+
+def resolve_category(db_path: str, item: str) -> str:
+    """Resolve an item type to its search pipeline ('cloth' | 'fabric').
+    Looks item_categories up case-insensitively; on a miss, infers the
+    category by name, persists it (source='inferred'), and returns it.
+    Never returns None — this is why ingest/seed no longer skip 'not routed'."""
+    item = (item or "").strip()
+    with connect(db_path) as conn:
+        row = conn.execute(
+            "SELECT category FROM item_categories WHERE item = ? COLLATE NOCASE",
+            (item,)).fetchone()
+        if row is not None:
+            return row["category"]
+        cat = infer_category(item)
+        conn.execute(
+            "INSERT OR IGNORE INTO item_categories (item, category, source) "
+            "VALUES (?, ?, 'inferred')", (item, cat))
+        conn.commit()
+    return cat
+
+
+def list_item_categories(db_path: str) -> list[dict]:
+    with connect(db_path) as conn:
+        rows = conn.execute(
+            "SELECT item, category, source FROM item_categories ORDER BY item"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def set_item_category(db_path: str, item: str, category: str) -> None:
+    """Manual override: upsert a mapping (source='manual'). Affects future
+    ingests/reindexes of this item; already-indexed rows are untouched."""
+    item = (item or "").strip()
+    with connect(db_path) as conn:
+        conn.execute(
+            "INSERT INTO item_categories (item, category, source) "
+            "VALUES (?, ?, 'manual') "
+            "ON CONFLICT(item) DO UPDATE SET "
+            "category=excluded.category, source='manual'",
+            (item, category))
         conn.commit()
 
 

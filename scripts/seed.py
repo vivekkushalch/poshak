@@ -11,7 +11,7 @@ import numpy as np
 from tqdm import tqdm
 
 from service import config
-from service.store import init_db, connect, upsert_image
+from service.store import init_db, connect, upsert_image, resolve_category
 from service.image_io import to_working_res
 from service.descriptors import compute_descriptors, save_descriptors
 from service.bg_remove import remove_bg_for_index
@@ -36,15 +36,6 @@ def rembg_fullsize(img):   # seam for tests -> (rgb_on_gray, engine_used)
     return remove_bg_for_index(img)
 
 
-def _categorize(item: str):
-    item = (item or "").strip()
-    if item in config.CLOTH_ITEMS:
-        return "cloth"
-    if item in config.FABRIC_ITEMS:
-        return "fabric"
-    return None
-
-
 def _already_done(photo: str) -> bool:
     with connect(str(config.SQLITE_PATH)) as c:
         row = c.execute(
@@ -64,9 +55,7 @@ def run(skus: list) -> dict:
     # SigLIP embeds (original + rembg); each fabric image does 1.
     work = []
     for sku in skus:
-        category = _categorize(sku.get("item"))
-        if category is None:
-            continue
+        category = resolve_category(str(config.SQLITE_PATH), sku.get("item"))
         for photo in (sku.get("images_on_server") or sku.get("images_in_db") or []):
             photo = photo.strip()
             if photo:

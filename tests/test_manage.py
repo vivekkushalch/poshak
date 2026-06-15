@@ -54,6 +54,18 @@ def test_index_one_skips_when_already_done(tmp_path, monkeypatch):
     assert res["status"] == "skipped" and calls["n"] == 0
 
 
+def test_index_one_indexes_unknown_item(tmp_path, monkeypatch):
+    db = _wire(tmp_path, monkeypatch)
+    (tmp_path / "uploads" / "k.jpg").write_bytes(b"x")
+    # 'Kurta' is in neither config set — must be indexed (cloth), not skipped.
+    res = manage.index_one(1, "D", "Kurta", "k.jpg")
+    assert res["status"] == "indexed"
+    assert res["category"] == "cloth"
+    with connect(db) as c:
+        assert c.execute("SELECT category FROM images WHERE photo_name='k.jpg'"
+                         ).fetchone()[0] == "cloth"
+
+
 def test_index_one_force_reindexes(tmp_path, monkeypatch):
     db = _wire(tmp_path, monkeypatch)
     manage.add_image(1, "D", "Sherwani", "a.jpg", b"x")

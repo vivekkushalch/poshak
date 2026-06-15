@@ -115,8 +115,13 @@ results. **Bump `MODEL_TAG` whenever the model or preprocessing changes**, then 
   input is capped to 768px height (`REMBG_MAX_H` in `bg_removal.py`) to match the
   prototype's `load_image(max_h=768)` — bg removal never runs on full-res originals.
   Comments flag these — respect them before "optimizing."
-- **Item routing** is data-driven by `config.CLOTH_ITEMS` / `FABRIC_ITEMS` matched against
-  `stockitem.name`. Items in neither set are skipped at index time.
+- **Item routing** resolves each `stockitem.name` to a search pipeline via
+  `store.resolve_category`: the `item_categories` DB table is the source of truth,
+  seeded once (idempotently, via `INSERT OR IGNORE` in `init_db`) from
+  `config.CLOTH_ITEMS` / `FABRIC_ITEMS`. An item in neither set is classified by name
+  (`"fabric"` substring → fabric, else cloth), persisted (`source='inferred'`), and
+  indexed — it is **no longer skipped**. Override a mapping at runtime via
+  `POST /categories` (`source='manual'`); list with `GET /categories`.
 - **Tracing:** wrap timed work in `debug.timed(...)` and log stages with `debug.dbg(...)`;
   everything shows up in `docker compose logs -f`. Set `DEBUG=0` to silence in prod.
 - **DB access:** always `with closing(get_connection())` (PyMySQL, `DictCursor`,

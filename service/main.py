@@ -16,7 +16,8 @@ from .auth import require_api_key
 from .debug import dbg
 from .manage import replace_image, forget_image
 from .search import fabric_search, unified_cloth_search
-from .store import STORE, init_db, list_skus, list_jobs, get_job
+from .store import (STORE, init_db, list_skus, list_jobs, get_job,
+                    list_item_categories, set_item_category)
 
 
 @asynccontextmanager
@@ -163,6 +164,20 @@ def forget(photo_name: str = Form(...)):
 @app.get("/skus", dependencies=[Depends(require_api_key)])
 def skus(page: int = 1, page_size: int = 50):
     return list_skus(str(config.SQLITE_PATH), config.MODEL_TAG, page, page_size)
+
+
+@app.get("/categories", dependencies=[Depends(require_api_key)])
+def get_categories():
+    return {"categories": list_item_categories(str(config.SQLITE_PATH))}
+
+
+@app.post("/categories", dependencies=[Depends(require_api_key)])
+def post_categories(item: str = Form(...), category: str = Form(...)):
+    if category not in ("cloth", "fabric"):
+        raise HTTPException(status_code=400,
+                            detail="category must be cloth or fabric")
+    set_item_category(str(config.SQLITE_PATH), item, category)
+    return {"status": "ok", "item": item.strip(), "category": category}
 
 
 @app.get("/index/jobs", dependencies=[Depends(require_api_key)])

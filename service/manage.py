@@ -13,7 +13,8 @@ from .bg_remove import remove_bg_for_index
 from .descriptors import compute_descriptors, load_descriptors, save_descriptors
 from .image_io import to_working_res
 from .model import siglip_embed
-from .store import STORE, blob_to_vec, connect, delete_by_photo, init_db, upsert_image
+from .store import (STORE, blob_to_vec, connect, delete_by_photo, init_db,
+                    resolve_category, upsert_image)
 
 _LOCK = threading.Lock()
 
@@ -46,15 +47,6 @@ def _decode_full(data: bytes) -> np.ndarray:
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
-
-
-def _categorize(item: str):
-    item = (item or "").strip()
-    if item in config.CLOTH_ITEMS:
-        return "cloth"
-    if item in config.FABRIC_ITEMS:
-        return "fabric"
-    return None
 
 
 def _already_indexed(photo_name) -> bool:
@@ -102,9 +94,7 @@ def index_one(sku_id, designno, item, photo_name, *, engine="auto",
               force=False, reload=True) -> dict:
     """Index a single ALREADY-STAGED original (in CORPUS_DIR). Shared by
     /ingest, the job worker, and seed."""
-    category = _categorize(item)
-    if category is None:
-        return {"status": "skipped", "reason": f"item {item!r} not routed"}
+    category = resolve_category(str(config.SQLITE_PATH), item)
     if not force and _already_indexed(photo_name):
         return {"status": "skipped", "reason": "already indexed",
                 "photo_name": photo_name}
@@ -123,8 +113,6 @@ def index_one(sku_id, designno, item, photo_name, *, engine="auto",
 
 def add_image(sku_id, designno, item, photo_name, data: bytes) -> dict:
     """Stage bytes to disk then index synchronously (single-call path)."""
-    if _categorize(item) is None:
-        return {"status": "skipped", "reason": f"item {item!r} not routed"}
     config.CORPUS_DIR.mkdir(parents=True, exist_ok=True)
     (config.CORPUS_DIR / photo_name).write_bytes(data)
     ledger.record("add", "original", photo_name, _now())
