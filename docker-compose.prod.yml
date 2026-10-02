@@ -14,7 +14,7 @@ services:
       DATA_ROOT: /data
       CORPUS_DIR: /corpus/uploads
       RMBG_DIR: /corpus/rmbg
-      REMBG_API_URL: ${REMBG_API_URL:-https://rembg.example.com}
+      REMBG_API_URL: ${REMBG_API_URL:-}
     volumes:
       - ${POSHAK_HOME:-/home/ubuntu/poshak}/data:/data
       - ${POSHAK_HOME:-/home/ubuntu/poshak}/corpus:/corpus

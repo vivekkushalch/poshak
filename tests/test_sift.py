@@ -3,7 +3,7 @@ from service import sift, descriptors
 
 
 def _legacy_sift_match_ratio(img1, img2):
-    """Inlined copy of the prototype's sift_match_ratio (spipeline.py L2029)
+    """Inlined copy of the prototype's sift_match_ratio
     used ONLY as a parity oracle in the test."""
     import cv2
     s = cv2.SIFT_create(nfeatures=1200, contrastThreshold=0.02, edgeThreshold=10)

@@ -1,6 +1,6 @@
 """Service configuration.
 
-Mirrors what the prototype (sharwani_large.ipynb) uses verbatim — the
+Mirrors what the prototype (research notebook) uses verbatim — the
 model id, paths, item routing — plus the few service-level knobs the
 notebook doesn't have (host/port, gc cadence).
 """
@@ -27,7 +27,7 @@ PORT = int(os.environ.get("PORT", "8088"))
 
 
 # --- corpus paths ----------------------------------------------------------
-# In docker-compose, c:/a local PHP server/htdocs/poshak/uploads is bind-mounted here RO.
+# In docker-compose, the catalog's original photos are bind-mounted here RO.
 # data/ holds bg-removed cloth PNGs produced by the bg_remove batch script.
 CORPUS_DIR = Path(os.environ.get("CORPUS_DIR", "/corpus/uploads"))
 DATA_DIR = Path(os.environ.get("DATA_DIR", "/corpus/data"))
@@ -45,7 +45,7 @@ CLOTH_ITEMS = {"Sherwani", "Indowestern", "Bandhgala", "Tuxedo", "Jacket", "Bomb
 FABRIC_ITEMS = {"Fabric"}
 
 
-# --- working resolution (matches spipeline.py load_image max_h=768) --------
+# --- working resolution (matches the research prototype's load_image max_h=768) --------
 WORKING_MAX_H = int(os.environ.get("WORKING_MAX_H", "768"))
 
 # --- local data (SQLite index + precomputed descriptors + change ledger) ---
@@ -58,11 +58,11 @@ LEDGER_PATH = Path(os.environ.get("LEDGER_PATH", str(DATA_ROOT / "pending_sync.j
 RMBG_DIR = Path(os.environ.get("RMBG_DIR", "/corpus/rmbg"))
 
 # --- external background-removal API (indexing only; primary) --------------
-# birefnet-general behind https://rembg.example.com ; slow single worker.
-# Per image: REMBG_API_TIMEOUT seconds, REMBG_API_RETRIES retries, then the
+# Optional birefnet-general HTTP service (GET /health, POST /remove). Unset =
+# local U2Net only. Per image: REMBG_API_TIMEOUT seconds, REMBG_API_RETRIES retries, then the
 # local U2Net rembg is used as a per-image fallback. Search-path query
 # bg-removal always stays local (see service/bg_removal.py).
-REMBG_API_URL = os.environ.get("REMBG_API_URL", "https://rembg.example.com")
+REMBG_API_URL = os.environ.get("REMBG_API_URL", "")
 REMBG_API_TIMEOUT = int(os.environ.get("REMBG_API_TIMEOUT", "360"))
 REMBG_API_RETRIES = int(os.environ.get("REMBG_API_RETRIES", "1"))
 REMBG_DEFAULT_ENGINE = os.environ.get("REMBG_DEFAULT_ENGINE", "auto")  # auto|api|local

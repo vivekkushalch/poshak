@@ -1,7 +1,7 @@
 """Local SQLite index + in-RAM store. Replaces the MySQL db.py/loader.py.
 
-Embeddings load into RAM as stacked matrices (port of spipeline.py
-prepare_matrix L2233). Descriptor paths stay as strings; pixels are never
+Embeddings load into RAM as stacked matrices (port of the research prototype's
+prepare_matrix). Descriptor paths stay as strings; pixels are never
 held. Entry dict shape matches the prototype's index entries."""
 
 import sqlite3

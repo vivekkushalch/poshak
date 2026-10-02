@@ -80,7 +80,7 @@ def remove_bg_for_index(img_rgb: np.ndarray, engine: str = "auto"):
     engine: 'auto' (api->local), 'api' (api with per-image local fallback on
     error), or 'local' (skip api entirely)."""
     engine = engine or config.REMBG_DEFAULT_ENGINE
-    if engine == "local":
+    if engine == "local" or not config.REMBG_API_URL:
         return remove_bg_rembg(img_rgb), "local"
     if engine == "auto" and not _api_health_ok():
         return remove_bg_rembg(img_rgb), "local"

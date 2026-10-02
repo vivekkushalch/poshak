@@ -1,5 +1,5 @@
-"""Search pipeline — port of spipeline.py search_pipeline_sift_first (L2257),
-aggregate_by_sku (L2322), unified_cloth_search_sift_priority (L2351).
+"""Search pipeline — port of the research prototype's search_pipeline_sift_first,
+aggregate_by_sku, unified_cloth_search_sift_priority (L2351).
 Candidates use PRECOMPUTED descriptors; query is detected once. Highpass IoU
 removed (unused in ranking). Resolution: 768 (callers pass working-res images)."""
 

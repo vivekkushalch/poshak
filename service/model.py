@@ -1,6 +1,6 @@
 """SigLIP singleton — matches the prototype's load exactly.
 
-Prototype (sharwani_large.ipynb):
+Prototype (research notebook):
     processor = AutoProcessor.from_pretrained("google/siglip-base-patch16-224")
     model     = AutoModel.from_pretrained("google/siglip-base-patch16-224").to(DEVICE).eval()
 

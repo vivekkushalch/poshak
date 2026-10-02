@@ -1,7 +1,14 @@
 import io
 import numpy as np
+import pytest
 from PIL import Image
 from service import bg_remove
+
+
+@pytest.fixture(autouse=True)
+def _api_configured(monkeypatch):
+    # REMBG_API_URL has no default; API-path tests need one set.
+    monkeypatch.setattr(bg_remove.config, "REMBG_API_URL", "http://rembg.test")
 
 
 def _png_rgba(h=8, w=8, alpha=255, rgb=200):
@@ -70,3 +77,15 @@ def test_auto_uses_local_when_health_down(monkeypatch):
     img = np.full((4, 4, 3), 70, np.uint8)
     out, engine = bg_remove.remove_bg_for_index(img, engine="auto")
     assert engine == "local"
+
+
+def test_unset_api_url_goes_local_without_network(monkeypatch):
+    monkeypatch.setattr(bg_remove.config, "REMBG_API_URL", "")
+    def boom(*a, **k):
+        raise AssertionError("must not touch the network when REMBG_API_URL is unset")
+    monkeypatch.setattr(bg_remove, "_api_health_ok", boom)
+    monkeypatch.setattr(bg_remove, "_api_post_remove", boom)
+    monkeypatch.setattr(bg_remove, "remove_bg_rembg", lambda im: im)
+    img = np.full((4, 4, 3), 70, np.uint8)
+    for engine in ("auto", "api"):
+        assert bg_remove.remove_bg_for_index(img, engine=engine)[1] == "local"

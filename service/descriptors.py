@@ -2,7 +2,7 @@
 
 Candidate descriptors never change, so we compute them once (offline / on
 ingest) and cache them. A search loads only the ~80 selected candidates'
-descriptors from disk. SIFT params match spipeline.py sift_match_ratio (L2030)."""
+descriptors from disk. SIFT params match the research prototype's sift_match_ratio."""
 
 from functools import lru_cache
 

@@ -25,7 +25,7 @@ def test_rembg_api_defaults(monkeypatch):
     import importlib
     from service import config as cfg
     importlib.reload(cfg)
-    assert cfg.REMBG_API_URL == "https://rembg.example.com"
+    assert cfg.REMBG_API_URL == ""
     assert cfg.REMBG_API_TIMEOUT == 360
     assert cfg.REMBG_API_RETRIES == 1
     assert cfg.REMBG_DEFAULT_ENGINE == "auto"

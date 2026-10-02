@@ -14,7 +14,7 @@ services:
       CORPUS_DIR: /corpus/uploads
       RMBG_DIR: /corpus/rmbg
       IMAGE_BASE_URL: ${IMAGE_BASE_URL:-}
-      REMBG_API_URL: ${REMBG_API_URL:-https://rembg.example.com}
+      REMBG_API_URL: ${REMBG_API_URL:-}
     volumes:
       - ./service:/app/service          # live edit
       - ./scripts:/app/scripts

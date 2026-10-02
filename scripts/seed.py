@@ -1,5 +1,5 @@
 """Idempotent, resumable cold-start build. Run inside the container:
-    uv run python -m scripts.seed --json /path/sku-image-map.json
+    uv run python -m scripts.seed --json /path/catalog.json
 Skips any per-item step already done so a crash at item N resumes at N."""
 
 import argparse

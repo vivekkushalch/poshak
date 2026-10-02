@@ -45,7 +45,7 @@ def find_actual_file(source_dir: Path, filename: str) -> Optional[str]:
     return matches[0] if matches else None
 
 
-# Port of spipeline.py load_image (max_h=768): scale by HEIGHT, INTER_AREA,
+# Port of the research prototype's load_image (max_h=768): scale by HEIGHT, INTER_AREA,
 # only when taller than max_h. Proportional — never crops or distorts.
 def to_working_res(img: np.ndarray, max_h: int | None = None) -> np.ndarray:
     max_h = config.WORKING_MAX_H if max_h is None else max_h

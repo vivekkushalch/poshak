@@ -14,13 +14,9 @@ corpus/
 *.npz
 
 # PII / dumps / prototype / docs — must NOT ship in a public image
-poshak.sql
 *.sql
-sku-image-map.json
 *.json
 *.ipynb
-spipeline*.py
-idea.md
 docs/
 tests/
 

@@ -1,4 +1,4 @@
-"""Background removal — exact port of spipeline.py remove_bg_rembg (L2004).
+"""Background removal — exact port of the research prototype's remove_bg_rembg.
 Runs on the FULL-SIZE image (best mask). Callers apply the 768 cap afterward
 via image_io.to_working_res before embedding / descriptor extraction."""
 

@@ -1,4 +1,4 @@
-"""SIFT geometric verification — split form of spipeline.py sift_match_ratio
+"""SIFT geometric verification — split form of the research prototype's sift_match_ratio
 (L2029). detect() runs once on the query; match_descriptors() consumes
 precomputed candidate descriptors. Match math is identical to the prototype."""
 
