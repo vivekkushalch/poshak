@@ -52,7 +52,7 @@ class FakeRemover:
 
 
 def make_container(tmp_path, **settings) -> Container:
-    s = Settings(disable_auth=True, data_root=tmp_path, **settings)
+    s = Settings(**{"disable_auth": True, "data_root": tmp_path, **settings})
     c = Container.build(
         s,
         embedder=FakeEmbedder(),

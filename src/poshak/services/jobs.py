@@ -9,6 +9,7 @@ queue to Redis or SQS behind the same submit/process interface."""
 
 import queue
 import threading
+from typing import Any
 
 from ..core.logging import log
 from ..domain.models import JobItem
@@ -32,6 +33,12 @@ class JobService:
     def submit(self, item: JobItem) -> None:
         self._jobs.add_item(item)
         self._queue.put(item)
+
+    def get(self, batch_id: str) -> dict[str, Any] | None:
+        return self._jobs.get(batch_id)
+
+    def list(self) -> list[dict[str, Any]]:
+        return self._jobs.list()
 
     def resume(self) -> int:
         pending = self._jobs.pending()

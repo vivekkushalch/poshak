@@ -59,6 +59,7 @@ class Container:
     originals: BlobStore
     cutouts: BlobStore
     descriptors: BlobStore
+    embedder: Embedder
     state: IndexState
     catalog: CatalogService
     indexer: IndexerService
@@ -94,7 +95,9 @@ class Container:
             max_concurrent=s.max_concurrent_searches, sift_workers=s.sift_workers,
         )  # fmt: skip
         jobs = JobService(indexer, SqliteJobRepository(db), state)
-        return cls(s, db, originals, cutouts, descriptors, state, catalog, indexer, search, jobs)
+        return cls(
+            s, db, originals, cutouts, descriptors, embedder, state, catalog, indexer, search, jobs
+        )
 
     def startup(self, *, start_worker: bool = True) -> None:
         self.db.init()

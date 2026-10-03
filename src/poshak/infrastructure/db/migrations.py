@@ -70,9 +70,10 @@ def migrate(conn: sqlite3.Connection) -> None:
 def _descriptor_paths_to_keys(conn: sqlite3.Connection) -> None:
     """Older builds stored absolute descriptor paths; blob stores use bare keys."""
     rows = conn.execute(
+        # char(47) = '/', char(92) = backslash
         "SELECT id, orig_desc, rembg_desc FROM images "
-        "WHERE orig_desc LIKE '%/%' OR orig_desc LIKE '%\%' "
-        "OR rembg_desc LIKE '%/%' OR rembg_desc LIKE '%\%'"
+        "WHERE instr(orig_desc, char(47)) OR instr(orig_desc, char(92)) "
+        "OR instr(rembg_desc, char(47)) OR instr(rembg_desc, char(92))"
     ).fetchall()
     for row_id, orig, rembg in rows:
         conn.execute(
