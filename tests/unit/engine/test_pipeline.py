@@ -1,4 +1,5 @@
 import json
+import os
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -52,7 +53,12 @@ def _run(pool):
 
 
 def test_engine_matches_golden():
-    assert _run(None) == json.loads(GOLDEN.read_text(encoding="utf-8"))
+    """The golden file pins rankings recorded from the original implementation.
+    Regenerate only for an intended ranking change: GOLDEN_WRITE=1 pytest <this file>."""
+    got = _run(None)
+    if os.environ.get("GOLDEN_WRITE") == "1":
+        GOLDEN.write_text(json.dumps(got, indent=1), encoding="utf-8")
+    assert got == json.loads(GOLDEN.read_text(encoding="utf-8"))
 
 
 def test_parallel_verify_equals_sequential():

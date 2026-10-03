@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Brand kit: zari lozenge mark, outlined Sora wordmark, light and dark lockups,
+  favicon for `/ui` and `/admin`, GitHub social card. See `docs/brand.md`.
+- Architecture document rewritten as a full design doc: C4 context, container and
+  component diagrams, sequences, data model, ranking formulas, latency and memory
+  budgets, failure modes, security, scaling, alternatives.
+- `bench/latency.py` and `bench/charts.py`: stage latency with the real models,
+  rendered into the README.
+- Layer rules from the architecture doc are enforced by a test.
+
 ## 0.3.0
 
 Restructured into a layered, installable package. Search results are unchanged:
