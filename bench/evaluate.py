@@ -273,6 +273,9 @@ def main() -> int:
             f.write(json.dumps(row) + "\n")
             f.flush()
 
+    # a resumed checkpoint may hold queries from an earlier, larger sample; report only this one
+    current = {(kind, variant, sku) for kind, variant, sku, _ in specs}
+    rows = [r for r in rows if (r["kind"], r["variant"], r["sku"]) in current]
     groups = sorted({(r["kind"], r["variant"]) for r in rows})
     results = {
         "machine": {
