@@ -2,7 +2,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/brand/banner-dark.svg">
-  <img alt="poshak: visual search for Indian wear. SigLIP sees the silhouette, SIFT sees the zari." src="docs/assets/brand/banner-light.svg" width="100%">
+  <img alt="poshak: visual search for Indian wear. Snap a photo, find the exact piece in your catalog." src="docs/assets/brand/banner-light.svg" width="100%">
 </picture>
 
 <h3>Embeddings find lookalikes. poshak finds the exact garment.</h3>
