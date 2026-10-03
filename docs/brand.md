@@ -28,6 +28,7 @@ field and the five keypoints, which stay legible at 16 px.
 | Stacked (square spaces, avatars) | `poshak-logo-stacked-light.svg` | `poshak-logo-stacked-dark.svg` |
 | Mark only | `poshak-mark-light.svg`, `.png` (512 px) | `poshak-mark-dark.svg` |
 | Favicon | `favicon.svg` | `favicon.svg` |
+| README banner (1280×400) | `banner-light.svg` | `banner-dark.svg` |
 | Social card (1280×640) | | `social-preview.png` |
 
 All files are in [`docs/assets/brand`](assets/brand). Use the PNG only where SVG

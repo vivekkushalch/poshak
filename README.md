@@ -1,11 +1,11 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/brand/poshak-logo-dark.svg">
-  <img alt="poshak" src="docs/assets/brand/poshak-logo-light.svg" width="300">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/brand/banner-dark.svg">
+  <img alt="poshak: visual search for Indian wear. SigLIP sees the silhouette, SIFT sees the zari." src="docs/assets/brand/banner-light.svg" width="100%">
 </picture>
 
-**Visual search for Indian wear that tells two near-identical sherwanis apart.**
+**Finds the exact sherwani, not just one that looks like it.**
 
 [![CI](https://github.com/vivekkushalch/poshak/actions/workflows/ci.yml/badge.svg)](https://github.com/vivekkushalch/poshak/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
