@@ -17,7 +17,7 @@ class MemoryBlobStore:
         try:
             return self.data[validate_key(key)]
         except KeyError:
-            raise NotFound(key) from None
+            raise NotFound(f"{key} not found") from None
 
     def put(self, key: str, data: bytes) -> None:
         self.data[validate_key(key)] = data

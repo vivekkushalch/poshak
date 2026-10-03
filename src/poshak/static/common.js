@@ -14,12 +14,26 @@ export function clearApiKey() {
   localStorage.removeItem(KEY_NAME);
 }
 
+export function hasApiKey() {
+  return localStorage.getItem(KEY_NAME) !== null;
+}
+
+export function setApiKey(key) {
+  localStorage.setItem(KEY_NAME, key);
+}
+
+export function currentApiKey() {
+  return localStorage.getItem(KEY_NAME) || "";
+}
+
 export async function apiFetch(path, opts = {}) {
   const headers = Object.assign({ "X-API-Key": getApiKey() }, opts.headers || {});
   const res = await fetch(path, Object.assign({}, opts, { headers }));
   if (res.status === 401) {
     clearApiKey();
-    throw new Error("Unauthorized — API key cleared, reload to re-enter.");
+    const err = new Error("Unauthorized. The API key was missing or wrong.");
+    err.status = 401;
+    throw err;
   }
   return res;
 }
@@ -34,6 +48,8 @@ export async function getImageBase() {
 }
 
 export function imgUrl(base, kind, name) {
-  // kind: 'uploads' | 'rmbg'
-  return `${base}/${kind}/${name}`;
+  // kind: 'uploads' | 'rmbg'. Without a public image host, use the service's own routes.
+  const n = encodeURIComponent(name);
+  if (!base) return kind === "rmbg" ? `/img/rmbg/${n}` : `/img/original/${n}`;
+  return `${base}/${kind}/${n}`;
 }

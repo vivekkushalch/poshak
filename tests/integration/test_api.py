@@ -61,6 +61,34 @@ def test_pages_and_static(client):
     assert "apiFetch" in client.get("/static/common.js").text
 
 
+def test_admin_app_is_complete_and_every_module_is_served(client):
+    html = client.get("/admin").text
+    assert all(f'data-panel="{tab}"' in html for tab in ("catalog", "upload", "jobs", "categories"))
+    assert 'href="/static/admin.css"' in html and 'src="/static/admin/app.js"' in html
+    for module in ("app", "kit", "api", "catalog", "upload", "jobs", "categories"):
+        r = client.get(f"/static/admin/{module}.js")
+        assert r.status_code == 200, module
+    # every relative import inside the admin modules resolves to a served file
+    for module in ("app", "catalog", "upload", "jobs", "categories"):
+        for line in client.get(f"/static/admin/{module}.js").text.splitlines():
+            if line.startswith("import") and '"./' in line:
+                target = line.split('"./')[1].split('"')[0]
+                assert client.get(f"/static/admin/{target}").status_code == 200, (module, target)
+
+
+def test_static_files_revalidate_so_upgrades_are_never_stale(client):
+    for path in ("/static/admin.css", "/static/admin/app.js", "/static/common.js"):
+        r = client.get(path)
+        assert r.status_code == 200 and r.headers["cache-control"] == "no-cache"
+    etag = client.get("/static/admin.css").headers["etag"]
+    assert client.get("/static/admin.css", headers={"If-None-Match": etag}).status_code == 304
+
+
+def test_missing_image_error_names_the_file(client):
+    r = client.get("/img/original/ghost.jpg")
+    assert r.status_code == 404 and r.json()["detail"] == "ghost.jpg not found"
+
+
 def test_openapi_documents_both_result_shapes(client):
     schemas = client.get("/openapi.json").json()["components"]["schemas"]
     assert {"ClothResult", "FabricResult", "ClothSearchResponse"} <= schemas.keys()

@@ -19,7 +19,7 @@ class LocalBlobStore:
         try:
             return self._path(key).read_bytes()
         except FileNotFoundError:
-            raise NotFound(key) from None
+            raise NotFound(f"{key} not found") from None
 
     def put(self, key: str, data: bytes) -> None:
         path = self._path(key)

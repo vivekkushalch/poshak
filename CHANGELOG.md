@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Admin UI rebuilt as a tabbed app: Catalog (photo and cutout side by side, filter,
+  page size, replace and delete with an in-page confirmation), Upload (drag and drop,
+  batch fields, live indexing progress), Jobs (progress bars, per-photo errors,
+  auto-refresh while running) and Categories (view and override item routing).
+  Header shows index health, light and dark themes, works at phone width, and asks for
+  the API key in a dialog instead of a browser prompt.
+- Images fall back to the service's own `/img/...` routes when `IMAGE_BASE_URL` is empty.
+- Static assets are served with `Cache-Control: no-cache`, so an upgrade never leaves a
+  stale UI in the browser.
+- "Not found" errors now name the file (`ghost.jpg not found`).
 - Brand kit: zari lozenge mark, outlined Sora wordmark, light and dark lockups,
   favicon for `/ui` and `/admin`, GitHub social card. See `docs/brand.md`.
 - Architecture document rewritten as a full design doc: C4 context, container and

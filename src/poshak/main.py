@@ -22,6 +22,16 @@ DESCRIPTION = (
 )
 
 
+class RevalidatingStatic(StaticFiles):
+    """Static assets revalidate on every load (the ETag makes that a cheap 304), so an
+    upgrade never leaves an admin looking at the previous version's UI."""
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 def create_app(settings: Settings | None = None, container: Container | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -36,7 +46,7 @@ def create_app(settings: Settings | None = None, container: Container | None = N
 
     app = FastAPI(title="poshak", version=__version__, description=DESCRIPTION, lifespan=lifespan)
     register_exception_handlers(app)
-    app.mount("/static", StaticFiles(directory=STATIC), name="static")
+    app.mount("/static", RevalidatingStatic(directory=STATIC), name="static")
     for router in routers:
         app.include_router(router)
     return app

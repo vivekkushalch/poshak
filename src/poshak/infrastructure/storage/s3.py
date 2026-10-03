@@ -44,7 +44,7 @@ class S3BlobStore:
             obj = self.client.get_object(Bucket=self.bucket, Key=self._key(key))
         except Exception as e:
             if self._is_missing(e):
-                raise NotFound(key) from None
+                raise NotFound(f"{key} not found") from None
             raise
         return obj["Body"].read()
 

@@ -120,8 +120,8 @@ DISABLE_AUTH=1 DATA_ROOT=./.localdata CORPUS_DIR=./.localcorpus/uploads \
   RMBG_DIR=./.localcorpus/rmbg uv run poshak serve
 ```
 
-Then open `/ui` for a phone-friendly search page, `/admin` to browse and fix
-indexed photos, or `/docs` for the OpenAPI reference.
+Then open `/ui` for a phone-friendly search page, `/admin` to upload photos, watch
+indexing jobs, browse the catalog and fix cutouts, or `/docs` for the OpenAPI reference.
 
 To index a catalog that is already in storage:
 
