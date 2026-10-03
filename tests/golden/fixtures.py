@@ -82,6 +82,12 @@ def queries() -> dict[str, tuple[str, np.ndarray]]:
     }
 
 
+def _json_filename(entry) -> str | None:
+    if entry is None:
+        return None
+    return entry["json_filename"] if isinstance(entry, dict) else entry.json_filename
+
+
 def summarize(category: str, results: list[dict]) -> list[dict]:
     out = []
     for r in results:
@@ -89,7 +95,7 @@ def summarize(category: str, results: list[dict]) -> list[dict]:
             "sku_id": r["sku_id"],
             "total_sift_matches": r["total_sift_matches"],
             "unified_score": round(float(r["unified_score"]), 9),
-            "best": (r["best_entry"] or {}).get("json_filename"),
+            "best": _json_filename(r["best_entry"]),
         }
         if category == "cloth":
             row.update(bg_sift=r["bg_sift"], orig_sift=r["orig_sift"], both_found=r["both_found"])
