@@ -1,0 +1,280 @@
+{
+ "cloth_noisy": [
+  {
+   "sku_id": 2,
+   "total_sift_matches": 156,
+   "unified_score": 1.014579276,
+   "best": "2_0.jpg",
+   "bg_sift": 70,
+   "orig_sift": 86,
+   "both_found": true
+  },
+  {
+   "sku_id": 4,
+   "total_sift_matches": 46,
+   "unified_score": 0.80605588,
+   "best": "4_1.jpg",
+   "bg_sift": 19,
+   "orig_sift": 27,
+   "both_found": true
+  },
+  {
+   "sku_id": 1,
+   "total_sift_matches": 42,
+   "unified_score": 0.76049512,
+   "best": "1_1.jpg",
+   "bg_sift": 18,
+   "orig_sift": 24,
+   "both_found": true
+  },
+  {
+   "sku_id": 6,
+   "total_sift_matches": 41,
+   "unified_score": 0.747862453,
+   "best": "6_1.jpg",
+   "bg_sift": 17,
+   "orig_sift": 24,
+   "both_found": true
+  },
+  {
+   "sku_id": 5,
+   "total_sift_matches": 37,
+   "unified_score": 0.7035828,
+   "best": "5_1.jpg",
+   "bg_sift": 16,
+   "orig_sift": 21,
+   "both_found": true
+  }
+ ],
+ "cloth_crop": [
+  {
+   "sku_id": 4,
+   "total_sift_matches": 219,
+   "unified_score": 1.013329251,
+   "best": "4_1.jpg",
+   "bg_sift": 84,
+   "orig_sift": 135,
+   "both_found": true
+  },
+  {
+   "sku_id": 2,
+   "total_sift_matches": 100,
+   "unified_score": 0.978927787,
+   "best": "2_1.jpg",
+   "bg_sift": 45,
+   "orig_sift": 55,
+   "both_found": true
+  },
+  {
+   "sku_id": 5,
+   "total_sift_matches": 99,
+   "unified_score": 0.981133775,
+   "best": "5_0.jpg",
+   "bg_sift": 39,
+   "orig_sift": 60,
+   "both_found": true
+  },
+  {
+   "sku_id": 3,
+   "total_sift_matches": 93,
+   "unified_score": 0.976780344,
+   "best": "3_1.jpg",
+   "bg_sift": 52,
+   "orig_sift": 41,
+   "both_found": true
+  },
+  {
+   "sku_id": 6,
+   "total_sift_matches": 87,
+   "unified_score": 0.970827036,
+   "best": "6_1.jpg",
+   "bg_sift": 33,
+   "orig_sift": 54,
+   "both_found": true
+  }
+ ],
+ "cloth_flip": [
+  {
+   "sku_id": 5,
+   "total_sift_matches": 91,
+   "unified_score": 0.98675526,
+   "best": "5_0.jpg",
+   "bg_sift": 42,
+   "orig_sift": 49,
+   "both_found": true
+  },
+  {
+   "sku_id": 2,
+   "total_sift_matches": 72,
+   "unified_score": 0.975046409,
+   "best": "2_1.jpg",
+   "bg_sift": 32,
+   "orig_sift": 40,
+   "both_found": true
+  },
+  {
+   "sku_id": 4,
+   "total_sift_matches": 63,
+   "unified_score": 0.959376554,
+   "best": "4_1.jpg",
+   "bg_sift": 24,
+   "orig_sift": 39,
+   "both_found": true
+  },
+  {
+   "sku_id": 1,
+   "total_sift_matches": 43,
+   "unified_score": 0.782695697,
+   "best": "1_0.jpg",
+   "bg_sift": 15,
+   "orig_sift": 28,
+   "both_found": true
+  },
+  {
+   "sku_id": 6,
+   "total_sift_matches": 40,
+   "unified_score": 0.746240515,
+   "best": "6_1.jpg",
+   "bg_sift": 13,
+   "orig_sift": 27,
+   "both_found": true
+  }
+ ],
+ "cloth_unrelated": [
+  {
+   "sku_id": 2,
+   "total_sift_matches": 66,
+   "unified_score": 0.968137911,
+   "best": "2_1.jpg",
+   "bg_sift": 28,
+   "orig_sift": 38,
+   "both_found": true
+  },
+  {
+   "sku_id": 1,
+   "total_sift_matches": 59,
+   "unified_score": 0.95563019,
+   "best": "1_1.jpg",
+   "bg_sift": 24,
+   "orig_sift": 35,
+   "both_found": true
+  },
+  {
+   "sku_id": 4,
+   "total_sift_matches": 54,
+   "unified_score": 0.906553035,
+   "best": "4_1.jpg",
+   "bg_sift": 24,
+   "orig_sift": 30,
+   "both_found": true
+  },
+  {
+   "sku_id": 3,
+   "total_sift_matches": 52,
+   "unified_score": 0.893230536,
+   "best": "3_1.jpg",
+   "bg_sift": 22,
+   "orig_sift": 30,
+   "both_found": true
+  },
+  {
+   "sku_id": 5,
+   "total_sift_matches": 52,
+   "unified_score": 0.884622606,
+   "best": "5_0.jpg",
+   "bg_sift": 22,
+   "orig_sift": 30,
+   "both_found": true
+  }
+ ],
+ "fabric_noisy": [
+  {
+   "sku_id": 8,
+   "total_sift_matches": 147,
+   "unified_score": 1.049978301,
+   "best": "8_1.jpg",
+   "tier": "HIGH"
+  },
+  {
+   "sku_id": 10,
+   "total_sift_matches": 42,
+   "unified_score": 0.94294607,
+   "best": "10_0.jpg",
+   "tier": "HIGH"
+  },
+  {
+   "sku_id": 9,
+   "total_sift_matches": 35,
+   "unified_score": 0.935549551,
+   "best": "9_0.jpg",
+   "tier": "HIGH"
+  },
+  {
+   "sku_id": 7,
+   "total_sift_matches": 32,
+   "unified_score": 0.931650629,
+   "best": "7_0.jpg",
+   "tier": "HIGH"
+  }
+ ],
+ "fabric_crop": [
+  {
+   "sku_id": 9,
+   "total_sift_matches": 144,
+   "unified_score": 1.029352826,
+   "best": "9_0.jpg",
+   "tier": "HIGH"
+  },
+  {
+   "sku_id": 8,
+   "total_sift_matches": 44,
+   "unified_score": 0.955438684,
+   "best": "8_0.jpg",
+   "tier": "HIGH"
+  },
+  {
+   "sku_id": 10,
+   "total_sift_matches": 49,
+   "unified_score": 0.948790705,
+   "best": "10_0.jpg",
+   "tier": "HIGH"
+  },
+  {
+   "sku_id": 7,
+   "total_sift_matches": 40,
+   "unified_score": 0.93261058,
+   "best": "7_0.jpg",
+   "tier": "HIGH"
+  }
+ ],
+ "fabric_unrelated": [
+  {
+   "sku_id": 7,
+   "total_sift_matches": 25,
+   "unified_score": 0.820860094,
+   "best": "7_0.jpg",
+   "tier": "MED"
+  },
+  {
+   "sku_id": 9,
+   "total_sift_matches": 17,
+   "unified_score": 0.731147754,
+   "best": "9_0.jpg",
+   "tier": "MED"
+  },
+  {
+   "sku_id": 10,
+   "total_sift_matches": 16,
+   "unified_score": 0.7113017,
+   "best": "10_0.jpg",
+   "tier": "MED"
+  },
+  {
+   "sku_id": 8,
+   "total_sift_matches": 13,
+   "unified_score": 0.639790367,
+   "best": "8_1.jpg",
+   "tier": "LOW"
+  }
+ ]
+}
