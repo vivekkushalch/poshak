@@ -5,7 +5,9 @@
   <img alt="poshak: visual search for Indian wear. SigLIP sees the silhouette, SIFT sees the zari." src="docs/assets/brand/banner-light.svg" width="100%">
 </picture>
 
-**Finds the exact sherwani, not just one that looks like it.**
+<h3>Embeddings find lookalikes. poshak finds the exact garment.</h3>
+
+Two-stage visual search for Indian wear · SigLIP recall + SIFT verification · built to run on a 2 GB CPU box
 
 [![CI](https://github.com/vivekkushalch/poshak/actions/workflows/ci.yml/badge.svg)](https://github.com/vivekkushalch/poshak/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
