@@ -1,34 +1,32 @@
-# ---- builder: install deps into a venv with uv -----------------------------
+# syntax=docker/dockerfile:1
+# ---- builder: resolve the locked environment with uv ------------------------
 FROM python:3.11-slim AS builder
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
-ENV UV_PYTHON_DOWNLOADS=0
+COPY --from=ghcr.io/astral-sh/uv:0.9 /uv /usr/local/bin/uv
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=0
 WORKDIR /app
-RUN uv venv /opt/venv
-ENV VIRTUAL_ENV=/opt/venv PATH="/opt/venv/bin:$PATH"
-# CPU-only torch first (from the CPU index), so the rest don't drag CUDA wheels.
-RUN uv pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision
-RUN uv pip install \
-      fastapi "uvicorn[standard]" python-multipart transformers sentencepiece \
-      pillow numpy opencv-python-headless rembg onnxruntime httpx tqdm pydantic pydantic-settings
+# deps first so code edits don't invalidate the (large) torch layer
+COPY pyproject.toml uv.lock ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --extra s3 --no-install-project
+COPY src ./src
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --extra s3 --no-editable
 
-# ---- runtime: slim Debian + venv + code + baked model ----------------------
+# ---- runtime -----------------------------------------------------------------
 FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
-    VIRTUAL_ENV=/opt/venv PATH="/opt/venv/bin:$PATH" \
-    HF_HOME=/models TRANSFORMERS_CACHE=/models/transformers
+    PATH="/app/.venv/bin:$PATH" HF_HOME=/models U2NET_HOME=/models/u2net
 RUN apt-get update \
- && apt-get install -y --no-install-recommends \
-      libgomp1 libjpeg62-turbo zlib1g libglib2.0-0 ca-certificates curl \
- && rm -rf /var/lib/apt/lists/*
-COPY --from=builder /opt/venv /opt/venv
-WORKDIR /app
-COPY src/poshak ./poshak
-COPY scripts ./scripts
-# Bake the public SigLIP model so first request isn't a download (no PII).
-RUN python -c "from transformers import AutoProcessor, AutoModel; \
-AutoProcessor.from_pretrained('google/siglip-base-patch16-224'); \
-AutoModel.from_pretrained('google/siglip-base-patch16-224')"
+ && apt-get install -y --no-install-recommends libgomp1 libglib2.0-0 curl \
+ && rm -rf /var/lib/apt/lists/* \
+ && useradd --uid 1000 --create-home poshak \
+ && mkdir -p /data /corpus /models && chown poshak:poshak /data /corpus /models
+COPY --from=builder /app/.venv /app/.venv
+USER poshak
+# Bake the public SigLIP weights so the first request isn't a 800 MB download.
+RUN python -c "from transformers import AutoModel, AutoProcessor; \
+m='google/siglip-base-patch16-224'; AutoProcessor.from_pretrained(m); AutoModel.from_pretrained(m)"
 EXPOSE 8088
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
-  CMD curl -fsS http://127.0.0.1:8088/health || exit 1
-CMD ["uvicorn", "poshak.main:app", "--host", "0.0.0.0", "--port", "8088"]
+  CMD curl -fsS http://127.0.0.1:8088/health/live || exit 1
+CMD ["poshak", "serve"]

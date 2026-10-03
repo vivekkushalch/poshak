@@ -1,6 +1,6 @@
 [project]
 name = "poshak"
-version = "0.2.0"
+version = "0.3.0"
 description = "Fine-grained visual search for Indian wear: SigLIP recall + SIFT geometric verification."
 license = "MIT"
 requires-python = ">=3.11"
@@ -22,6 +22,9 @@ dependencies = [
   "torch",
   "torchvision",
 ]
+
+[project.scripts]
+poshak = "poshak.cli:main"
 
 [project.optional-dependencies]
 s3 = ["boto3"]

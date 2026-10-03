@@ -1,0 +1,23 @@
+# Local run with state in ./.localdata and photos in ./.localcorpus.
+#   docker compose up -d --build && curl localhost:8088/health
+# For code changes without rebuilding, run outside Docker: uv run poshak serve
+services:
+  poshak:
+    build: .
+    image: poshak:dev
+    ports:
+      - "8088:8088"
+    environment:
+      DISABLE_AUTH: "1"
+      DATA_ROOT: /data
+      CORPUS_DIR: /corpus/uploads
+      RMBG_DIR: /corpus/rmbg
+      IMAGE_BASE_URL: ${IMAGE_BASE_URL:-}
+      REMBG_API_URL: ${REMBG_API_URL:-}
+      LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
+    volumes:
+      - ./.localdata:/data
+      - ./.localcorpus:/corpus
+      - models:/models
+volumes:
+  models:

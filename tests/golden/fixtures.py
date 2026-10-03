@@ -42,7 +42,7 @@ def fake_remove_bg(img: np.ndarray) -> np.ndarray:
 
 
 def catalog() -> list[dict]:
-    """[{sku_id, category, photo, image}] — 6 cloth SKUs and 4 fabric SKUs, 2 photos each."""
+    """[{sku_id, category, photo, image}]: 6 cloth SKUs and 4 fabric SKUs, 2 photos each."""
     rows = []
     for sku in range(1, 11):
         category = "cloth" if sku <= 6 else "fabric"

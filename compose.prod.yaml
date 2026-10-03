@@ -1,12 +1,11 @@
-# SERVER (Lightsail): pull the published image; HOST bind-mounts so all state
-# lives under ~/poshak and survives container/volume loss (backup = tar ~/poshak).
-#   docker compose -f docker-compose.prod.yml pull && up -d
+# Single-node production (e.g. a 2 GB VM). All state lives under POSHAK_HOME on
+# the host and survives container loss; back up with: tar czf poshak.tgz ~/poshak
+#   docker compose -f compose.prod.yaml pull && docker compose -f compose.prod.yaml up -d
 services:
-  image-search:
+  poshak:
     image: kent997/poshak:latest
     container_name: poshak
     restart: unless-stopped
-    pull_policy: always
     ports:
       - "8088:8088"
     env_file: .env
@@ -14,7 +13,6 @@ services:
       DATA_ROOT: /data
       CORPUS_DIR: /corpus/uploads
       RMBG_DIR: /corpus/rmbg
-      REMBG_API_URL: ${REMBG_API_URL:-}
     volumes:
       - ${POSHAK_HOME:-/home/ubuntu/poshak}/data:/data
       - ${POSHAK_HOME:-/home/ubuntu/poshak}/corpus:/corpus

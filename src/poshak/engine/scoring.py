@@ -1,4 +1,4 @@
-"""Scoring constants and formulas — verbatim from the prototype's
+"""Scoring constants and formulas, verbatim from the prototype's
 final SIFT-FIRST iteration.
 
 Two layers:
@@ -7,7 +7,7 @@ Two layers:
   2. Unified cloth fusion across BG + Orig pipelines (per SKU).
 
 If you change a constant here, retune across the test set. The numbers
-below are tuned to the catalog (Sherwani / Indowestern / etc.) — they
+below are tuned to the catalog (Sherwani, Indowestern, etc.). They
 are not generic.
 """
 
