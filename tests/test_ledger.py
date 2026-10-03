@@ -1,5 +1,6 @@
 import json
-from service import ledger
+
+from poshak import ledger
 
 
 def test_append_writes_one_jsonl_line_per_change(tmp_path, monkeypatch):
@@ -10,5 +11,4 @@ def test_append_writes_one_jsonl_line_per_change(tmp_path, monkeypatch):
     lines = p.read_text().strip().splitlines()
     assert len(lines) == 2
     first = json.loads(lines[0])
-    assert first == {"op": "add", "kind": "original", "name": "a.jpg",
-                     "ts": "2026-06-14T00:00:00"}
+    assert first == {"op": "add", "kind": "original", "name": "a.jpg", "ts": "2026-06-14T00:00:00"}

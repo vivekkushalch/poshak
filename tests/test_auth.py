@@ -1,7 +1,7 @@
-import pytest
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
-from service import auth, config
+
+from poshak import auth, config
 
 
 def _app():
@@ -10,6 +10,7 @@ def _app():
     @app.get("/protected", dependencies=[Depends(auth.require_api_key)])
     def protected():
         return {"ok": True}
+
     return TestClient(app, raise_server_exceptions=True)
 
 

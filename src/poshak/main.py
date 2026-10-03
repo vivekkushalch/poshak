@@ -2,6 +2,7 @@
 
 import gc
 import uuid
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import cv2
@@ -9,15 +10,20 @@ import numpy as np
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from contextlib import asynccontextmanager
 
 from . import config, jobs
 from .auth import require_api_key
-from .debug import dbg
-from .manage import replace_image, forget_image
+from .manage import forget_image, replace_image
 from .search import fabric_search, unified_cloth_search
-from .store import (STORE, init_db, list_skus, list_jobs, get_job,
-                    list_item_categories, set_item_category)
+from .store import (
+    STORE,
+    get_job,
+    init_db,
+    list_item_categories,
+    list_jobs,
+    list_skus,
+    set_item_category,
+)
 
 
 @asynccontextmanager
@@ -81,7 +87,8 @@ def _decode_rgb(data: bytes) -> np.ndarray:
 
 def _entry_to_result(e: dict) -> dict:
     return {
-        "sku_id": e.get("sku_id"), "designno": e.get("designno"),
+        "sku_id": e.get("sku_id"),
+        "designno": e.get("designno"),
         "item": e.get("item"),
         "filename": e.get("json_filename") or e.get("filename"),
         "json_filename": e.get("json_filename") or e.get("filename"),
@@ -90,20 +97,26 @@ def _entry_to_result(e: dict) -> dict:
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "model_tag": config.MODEL_TAG,
-            "embed_dim": config.EMBED_DIM, "index": STORE.stats(),
-            "index_ready": STORE.is_ready()}
+    return {
+        "status": "ok",
+        "model_tag": config.MODEL_TAG,
+        "embed_dim": config.EMBED_DIM,
+        "index": STORE.stats(),
+        "index_ready": STORE.is_ready(),
+    }
 
 
 @app.get("/config")
 def get_config():
-    return {"image_base_url": config.IMAGE_BASE_URL,
-            "uploads_prefix": "uploads", "rmbg_prefix": "rmbg"}
+    return {
+        "image_base_url": config.IMAGE_BASE_URL,
+        "uploads_prefix": "uploads",
+        "rmbg_prefix": "rmbg",
+    }
 
 
 @app.post("/search", dependencies=[Depends(require_api_key)])
-async def search(image: UploadFile = File(...), category: str = Form(...),
-                 top_k: int = Form(5)):
+async def search(image: UploadFile = File(...), category: str = Form(...), top_k: int = Form(5)):
     if not STORE.is_ready():
         raise HTTPException(status_code=503, detail="index not loaded yet")
     if category not in ("cloth", "fabric"):
@@ -121,33 +134,50 @@ async def search(image: UploadFile = File(...), category: str = Form(...),
     out = []
     for r in ranked:
         best = r.get("best_entry") or {}
-        out.append({**{k: v for k, v in r.items() if k != "best_entry"},
-                    "best_entry": _entry_to_result(best)})
-    return {"status": "success", "method": "SIFT", "category": category,
-            "total_found": len(out), "results": out, "model_tag": config.MODEL_TAG}
+        out.append(
+            {
+                **{k: v for k, v in r.items() if k != "best_entry"},
+                "best_entry": _entry_to_result(best),
+            }
+        )
+    return {
+        "status": "success",
+        "method": "SIFT",
+        "category": category,
+        "total_found": len(out),
+        "results": out,
+        "model_tag": config.MODEL_TAG,
+    }
 
 
 @app.post("/ingest", dependencies=[Depends(require_api_key)])
-async def ingest(image: UploadFile = File(...), sku_id: int = Form(...),
-                 designno: str = Form(""), item: str = Form(...),
-                 photo_name: str = Form(...), batch_id: str = Form(""),
-                 bg_engine: str = Form("auto"), force: bool = Form(False)):
+async def ingest(
+    image: UploadFile = File(...),
+    sku_id: int = Form(...),
+    designno: str = Form(""),
+    item: str = Form(...),
+    photo_name: str = Form(...),
+    batch_id: str = Form(""),
+    bg_engine: str = Form("auto"),
+    force: bool = Form(False),
+):
     photo_name = _safe_name(photo_name)
     if bg_engine not in ("auto", "api", "local"):
-        raise HTTPException(status_code=400,
-                            detail="bg_engine must be auto, api or local")
+        raise HTTPException(status_code=400, detail="bg_engine must be auto, api or local")
     batch_id = batch_id or uuid.uuid4().hex
     data = await image.read()
     config.CORPUS_DIR.mkdir(parents=True, exist_ok=True)
     (config.CORPUS_DIR / photo_name).write_bytes(data)
     jobs.submit(batch_id, photo_name, sku_id, designno, item, bg_engine, force)
-    return JSONResponse({"batch_id": batch_id, "photo_name": photo_name,
-                         "queued": True}, status_code=202)
+    return JSONResponse(
+        {"batch_id": batch_id, "photo_name": photo_name, "queued": True}, status_code=202
+    )
 
 
 @app.post("/replace", dependencies=[Depends(require_api_key)])
-async def replace(image: UploadFile = File(...), photo_name: str = Form(...),
-                  kind: str = Form(...)):
+async def replace(
+    image: UploadFile = File(...), photo_name: str = Form(...), kind: str = Form(...)
+):
     photo_name = _safe_name(photo_name)
     if kind not in ("original", "rmbg"):
         raise HTTPException(status_code=400, detail="kind must be original or rmbg")
@@ -174,8 +204,7 @@ def get_categories():
 @app.post("/categories", dependencies=[Depends(require_api_key)])
 def post_categories(item: str = Form(...), category: str = Form(...)):
     if category not in ("cloth", "fabric"):
-        raise HTTPException(status_code=400,
-                            detail="category must be cloth or fabric")
+        raise HTTPException(status_code=400, detail="category must be cloth or fabric")
     set_item_category(str(config.SQLITE_PATH), item, category)
     return {"status": "ok", "item": item.strip(), "category": category}
 

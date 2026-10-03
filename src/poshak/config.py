@@ -8,7 +8,6 @@ notebook doesn't have (host/port, gc cadence).
 import os
 from pathlib import Path
 
-
 # --- model identity --------------------------------------------------------
 # Locked to what the prototype loads:
 #   processor = AutoProcessor.from_pretrained("google/siglip-base-patch16-224")

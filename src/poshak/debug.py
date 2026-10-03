@@ -10,10 +10,8 @@ Set env DEBUG=0 to silence (production deploy).
 """
 
 import os
-import sys
 import time
 from contextlib import contextmanager
-
 
 ENABLED = os.environ.get("DEBUG", "1") != "0"
 

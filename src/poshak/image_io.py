@@ -12,7 +12,6 @@ Matches the notebook's behavior exactly:
 import glob
 import os
 from pathlib import Path
-from typing import Optional
 
 import cv2
 import numpy as np
@@ -20,14 +19,14 @@ import numpy as np
 from . import config
 
 
-def load_image(path: str) -> Optional[np.ndarray]:
+def load_image(path: str) -> np.ndarray | None:
     img = cv2.imread(path)
     if img is None:
         return None
     return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
 
-def find_actual_file(source_dir: Path, filename: str) -> Optional[str]:
+def find_actual_file(source_dir: Path, filename: str) -> str | None:
     """Port of the prototype's `find_actual_file`. Walks extension
     variants so a CSV typo in `stock.photos` still resolves."""
     source_dir = Path(source_dir)

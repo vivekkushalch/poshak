@@ -15,11 +15,11 @@ are not generic.
 def confidence_and_tier(good_matches: int, sift_ratio: float, siglip_sim: float):
     """Per-candidate confidence + tier.
 
-        good >= 30: HIGH  = 0.90 + 0.10 * min(good/100, 1)
-        good >= 15: MED   = 0.70 + 0.20 * ((good-15)/15)
-        good >=  5: LOW   = 0.40 + 0.30 * ((good-5)/10)
-        else:       WEAK  = 0.10 + 0.30 * sift_ratio
-        confidence += 0.05 * siglip_sim   # tiebreaker
+    good >= 30: HIGH  = 0.90 + 0.10 * min(good/100, 1)
+    good >= 15: MED   = 0.70 + 0.20 * ((good-15)/15)
+    good >=  5: LOW   = 0.40 + 0.30 * ((good-5)/10)
+    else:       WEAK  = 0.10 + 0.30 * sift_ratio
+    confidence += 0.05 * siglip_sim   # tiebreaker
     """
     if good_matches >= 30:
         confidence = 0.90 + 0.10 * min(good_matches / 100.0, 1.0)

@@ -1,11 +1,16 @@
 [project]
 name = "poshak"
 version = "0.2.0"
+description = "Fine-grained visual search for Indian wear: SigLIP recall + SIFT geometric verification."
+license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi",
   "uvicorn[standard]",
   "python-multipart",
+  "pydantic>=2",
+  "pydantic-settings>=2",
+  "httpx",
   "transformers",
   "sentencepiece",
   "pillow",
@@ -13,16 +18,46 @@ dependencies = [
   "opencv-python-headless",
   "rembg",
   "onnxruntime",
-  "boto3",
   "tqdm",
   "torch",
   "torchvision",
 ]
 
+[project.optional-dependencies]
+s3 = ["boto3"]
+
 [dependency-groups]
-dev = ["pytest", "moto[s3]", "httpx"]
+dev = ["pytest", "moto[s3]", "boto3", "ruff"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/poshak"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
 markers = ["slow: requires model download / heavy compute"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.File", "fastapi.Form", "fastapi.Depends", "fastapi.Query", "fastapi.Header"]
+
+# CPU-only torch everywhere (CI, Docker, dev): avoids multi-GB CUDA wheels.
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true

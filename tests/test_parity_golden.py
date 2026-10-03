@@ -8,8 +8,8 @@ from pathlib import Path
 
 import numpy as np
 
-from service import descriptors, search
-from service.store import IndexStore
+from poshak import descriptors, search
+from poshak.store import IndexStore
 from tests.golden.fixtures import catalog, fake_embed, fake_remove_bg, queries, summarize
 
 GOLDEN = Path(__file__).parent / "golden" / "search_golden.json"
@@ -18,9 +18,15 @@ GOLDEN = Path(__file__).parent / "golden" / "search_golden.json"
 def _entry(row, img, name, desc_path):
     des, n = descriptors.compute_descriptors(img)
     descriptors.save_descriptors(desc_path, des, n)
-    return {"sku_id": row["sku_id"], "designno": "", "item": row["category"],
-            "filename": name, "json_filename": row["photo"],
-            "desc_path": desc_path, "embed": fake_embed(img)}
+    return {
+        "sku_id": row["sku_id"],
+        "designno": "",
+        "item": row["category"],
+        "filename": name,
+        "json_filename": row["photo"],
+        "desc_path": desc_path,
+        "embed": fake_embed(img),
+    }
 
 
 def _run(tmp_path, monkeypatch) -> dict:
@@ -34,8 +40,14 @@ def _run(tmp_path, monkeypatch) -> dict:
         else:
             store.cloth_orig.append(orig)
             png = row["photo"].replace(".jpg", ".png")
-            store.cloth_bg.append(_entry(row, fake_remove_bg(row["image"]), png,
-                                         str(tmp_path / f"{row['photo']}.rmbg.npz")))
+            store.cloth_bg.append(
+                _entry(
+                    row,
+                    fake_remove_bg(row["image"]),
+                    png,
+                    str(tmp_path / f"{row['photo']}.rmbg.npz"),
+                )
+            )
     store.cloth_bg_embeds = np.stack([e["embed"] for e in store.cloth_bg])
     store.cloth_orig_embeds = np.stack([e["embed"] for e in store.cloth_orig])
     store.fabric_embeds = np.stack([e["embed"] for e in store.fabric])

@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
-from service import main, config
+
+from poshak import config, main
 
 
 def test_ui_page_served(monkeypatch):

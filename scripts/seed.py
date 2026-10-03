@@ -10,12 +10,12 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 
-from service import config
-from service.store import init_db, connect, upsert_image, resolve_category
-from service.image_io import to_working_res
-from service.descriptors import compute_descriptors, save_descriptors
-from service.bg_remove import remove_bg_for_index
-from service.model import siglip_embed
+from poshak import config
+from poshak.bg_remove import remove_bg_for_index
+from poshak.descriptors import compute_descriptors, save_descriptors
+from poshak.image_io import to_working_res
+from poshak.model import siglip_embed
+from poshak.store import connect, init_db, resolve_category, upsert_image
 
 
 def decode_768(data: bytes) -> np.ndarray:
@@ -24,15 +24,15 @@ def decode_768(data: bytes) -> np.ndarray:
     return to_working_res(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
 
 
-def embed(img):            # seam for tests
+def embed(img):  # seam for tests
     return siglip_embed(img)
 
 
-def compute_desc(img):     # seam for tests
+def compute_desc(img):  # seam for tests
     return compute_descriptors(img)
 
 
-def rembg_fullsize(img):   # seam for tests -> (rgb_on_gray, engine_used)
+def rembg_fullsize(img):  # seam for tests -> (rgb_on_gray, engine_used)
     return remove_bg_for_index(img)
 
 
@@ -40,7 +40,8 @@ def _already_done(photo: str) -> bool:
     with connect(str(config.SQLITE_PATH)) as c:
         row = c.execute(
             "SELECT orig_desc FROM images WHERE photo_name=? AND model_tag=?",
-            (photo, config.MODEL_TAG)).fetchone()
+            (photo, config.MODEL_TAG),
+        ).fetchone()
     return bool(row and row[0] and os.path.exists(row[0]))
 
 
@@ -56,7 +57,7 @@ def run(skus: list) -> dict:
     work = []
     for sku in skus:
         category = resolve_category(str(config.SQLITE_PATH), sku.get("item"))
-        for photo in (sku.get("images_on_server") or sku.get("images_in_db") or []):
+        for photo in sku.get("images_on_server") or sku.get("images_in_db") or []:
             photo = photo.strip()
             if photo:
                 work.append((sku, category, photo))
@@ -65,15 +66,19 @@ def run(skus: list) -> dict:
     pbar = tqdm(total=total_embeds, unit="embed", desc="SigLIP+SIFT")
 
     def _refresh():
-        pbar.set_postfix(done=stats["done"], skipped=stats["skipped"],
-                         missing=stats["missing"], embeds=stats["embeds"])
+        pbar.set_postfix(
+            done=stats["done"],
+            skipped=stats["skipped"],
+            missing=stats["missing"],
+            embeds=stats["embeds"],
+        )
 
     for sku, category, photo in work:
         step = 2 if category == "cloth" else 1
 
         if _already_done(photo):
             stats["skipped"] += 1
-            pbar.update(step)          # advance past work already finished
+            pbar.update(step)  # advance past work already finished
             _refresh()
             continue
 
@@ -108,10 +113,21 @@ def run(skus: list) -> dict:
             rembg_desc = str(config.DESC_DIR / f"{photo}.rmbg.npz")
             save_descriptors(rembg_desc, rdes, rn)
 
-        upsert_image(str(config.SQLITE_PATH), sku["stock_id"],
-                     sku.get("designno", ""), sku.get("item", ""), category,
-                     photo, rembg_name, orig_vec, rembg_vec,
-                     orig_desc, rembg_desc, config.MODEL_TAG, bg_engine)
+        upsert_image(
+            str(config.SQLITE_PATH),
+            sku["stock_id"],
+            sku.get("designno", ""),
+            sku.get("item", ""),
+            category,
+            photo,
+            rembg_name,
+            orig_vec,
+            rembg_vec,
+            orig_desc,
+            rembg_desc,
+            config.MODEL_TAG,
+            bg_engine,
+        )
         stats["done"] += 1
         _refresh()
 

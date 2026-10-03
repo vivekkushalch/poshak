@@ -40,6 +40,7 @@ def _encode(img_rgb: np.ndarray) -> bytes:
 
 def _api_health_ok() -> bool:
     import httpx
+
     try:
         r = httpx.get(f"{config.REMBG_API_URL}/health", timeout=10)
         return r.status_code == 200
@@ -50,6 +51,7 @@ def _api_health_ok() -> bool:
 
 def _api_post_remove(data: bytes):
     import httpx
+
     return httpx.post(
         f"{config.REMBG_API_URL}/remove",
         files={"file": ("image.png", data, "image/png")},

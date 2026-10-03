@@ -9,7 +9,7 @@ ENV VIRTUAL_ENV=/opt/venv PATH="/opt/venv/bin:$PATH"
 RUN uv pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision
 RUN uv pip install \
       fastapi "uvicorn[standard]" python-multipart transformers sentencepiece \
-      pillow numpy opencv-python-headless rembg onnxruntime httpx tqdm
+      pillow numpy opencv-python-headless rembg onnxruntime httpx tqdm pydantic pydantic-settings
 
 # ---- runtime: slim Debian + venv + code + baked model ----------------------
 FROM python:3.11-slim
@@ -22,7 +22,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /opt/venv /opt/venv
 WORKDIR /app
-COPY service ./service
+COPY src/poshak ./poshak
 COPY scripts ./scripts
 # Bake the public SigLIP model so first request isn't a download (no PII).
 RUN python -c "from transformers import AutoProcessor, AutoModel; \
@@ -31,4 +31,4 @@ AutoModel.from_pretrained('google/siglip-base-patch16-224')"
 EXPOSE 8088
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
   CMD curl -fsS http://127.0.0.1:8088/health || exit 1
-CMD ["uvicorn", "service.main:app", "--host", "0.0.0.0", "--port", "8088"]
+CMD ["uvicorn", "poshak.main:app", "--host", "0.0.0.0", "--port", "8088"]

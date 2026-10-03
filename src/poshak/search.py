@@ -29,11 +29,17 @@ def search_pipeline_sift_first(query_img, embeds, entries, top_k_img=40):
         des_c, n_kp_c = load_descriptors(entry["desc_path"])
         sift_ratio, good, total_kp = match_descriptors(des_q, n_kp_q, des_c, n_kp_c)
         confidence, tier = confidence_and_tier(good, sift_ratio, float(sims[idx]))
-        results.append({
-            "entry": entry, "siglip_sim": float(sims[idx]),
-            "sift_ratio": sift_ratio, "sift_matches": good, "total_kp": total_kp,
-            "score": confidence, "confidence_tier": tier,
-        })
+        results.append(
+            {
+                "entry": entry,
+                "siglip_sim": float(sims[idx]),
+                "sift_ratio": sift_ratio,
+                "sift_matches": good,
+                "total_kp": total_kp,
+                "score": confidence,
+                "confidence_tier": tier,
+            }
+        )
     results.sort(key=lambda x: (x["sift_matches"], x["score"]), reverse=True)
     return results
 
@@ -45,9 +51,12 @@ def aggregate_by_sku(image_results, top_k_sku=10):
         cur = sku_scores.get(sku_id)
         if cur is None or r["score"] > cur["best_score"]:
             sku_scores[sku_id] = {
-                "best_score": r["score"], "best_entry": r["entry"],
-                "siglip": r["siglip_sim"], "sift": r["sift_ratio"],
-                "sift_matches": r["sift_matches"], "tier": r["confidence_tier"],
+                "best_score": r["score"],
+                "best_entry": r["entry"],
+                "siglip": r["siglip_sim"],
+                "sift": r["sift_ratio"],
+                "sift_matches": r["sift_matches"],
+                "tier": r["confidence_tier"],
             }
     return sorted(sku_scores.items(), key=lambda x: x[1]["best_score"], reverse=True)[:top_k_sku]
 
@@ -66,34 +75,58 @@ def unified_cloth_search(query_img, store, top_k=5):
 
     all_c: dict = {}
     for sku_id, d in bg_sku:
-        all_c[sku_id] = {"bg_score": d["best_score"], "bg_sift_matches": d["sift_matches"],
-                         "bg_tier": d["tier"], "bg_entry": d["best_entry"],
-                         "orig_score": 0, "orig_sift_matches": 0, "orig_tier": "NONE",
-                         "orig_entry": None}
+        all_c[sku_id] = {
+            "bg_score": d["best_score"],
+            "bg_sift_matches": d["sift_matches"],
+            "bg_tier": d["tier"],
+            "bg_entry": d["best_entry"],
+            "orig_score": 0,
+            "orig_sift_matches": 0,
+            "orig_tier": "NONE",
+            "orig_entry": None,
+        }
     for sku_id, d in orig_sku:
         if sku_id in all_c:
-            all_c[sku_id].update(orig_score=d["best_score"], orig_sift_matches=d["sift_matches"],
-                                 orig_tier=d["tier"], orig_entry=d["best_entry"])
+            all_c[sku_id].update(
+                orig_score=d["best_score"],
+                orig_sift_matches=d["sift_matches"],
+                orig_tier=d["tier"],
+                orig_entry=d["best_entry"],
+            )
         else:
-            all_c[sku_id] = {"bg_score": 0, "bg_sift_matches": 0, "bg_tier": "NONE",
-                             "bg_entry": None, "orig_score": d["best_score"],
-                             "orig_sift_matches": d["sift_matches"], "orig_tier": d["tier"],
-                             "orig_entry": d["best_entry"]}
+            all_c[sku_id] = {
+                "bg_score": 0,
+                "bg_sift_matches": 0,
+                "bg_tier": "NONE",
+                "bg_entry": None,
+                "orig_score": d["best_score"],
+                "orig_sift_matches": d["sift_matches"],
+                "orig_tier": d["tier"],
+                "orig_entry": d["best_entry"],
+            }
 
     verified = []
     for sku_id, c in all_c.items():
         unified_score, both = unified_cloth_score(
-            c["bg_sift_matches"], c["orig_sift_matches"], c["bg_score"], c["orig_score"])
+            c["bg_sift_matches"], c["orig_sift_matches"], c["bg_score"], c["orig_score"]
+        )
         total_sift = c["bg_sift_matches"] + c["orig_sift_matches"]
         best_entry = c["orig_entry"] if c["orig_entry"] else c["bg_entry"]
-        verified.append({
-            "sku_id": sku_id, "unified_score": unified_score,
-            "total_sift_matches": total_sift, "bg_sift": c["bg_sift_matches"],
-            "orig_sift": c["orig_sift_matches"], "bg_tier": c["bg_tier"],
-            "orig_tier": c["orig_tier"], "bg_score": c["bg_score"],
-            "orig_score": c["orig_score"], "both_found": both > 0.5,
-            "best_entry": best_entry,
-        })
+        verified.append(
+            {
+                "sku_id": sku_id,
+                "unified_score": unified_score,
+                "total_sift_matches": total_sift,
+                "bg_sift": c["bg_sift_matches"],
+                "orig_sift": c["orig_sift_matches"],
+                "bg_tier": c["bg_tier"],
+                "orig_tier": c["orig_tier"],
+                "bg_score": c["bg_score"],
+                "orig_score": c["orig_score"],
+                "both_found": both > 0.5,
+                "best_entry": best_entry,
+            }
+        )
     verified.sort(key=lambda x: (x["total_sift_matches"], x["unified_score"]), reverse=True)
     return verified[:top_k]
 
@@ -102,6 +135,13 @@ def fabric_search(query_img, store, top_k=5):
     q768 = to_working_res(query_img)
     results = search_pipeline_sift_first(q768, store.fabric_embeds, store.fabric, 40)
     ranked = aggregate_by_sku(results, top_k_sku=top_k)
-    return [{"sku_id": sku_id, "unified_score": d["best_score"],
-             "total_sift_matches": d["sift_matches"], "tier": d["tier"],
-             "best_entry": d["best_entry"]} for sku_id, d in ranked]
+    return [
+        {
+            "sku_id": sku_id,
+            "unified_score": d["best_score"],
+            "total_sift_matches": d["sift_matches"],
+            "tier": d["tier"],
+            "best_entry": d["best_entry"],
+        }
+        for sku_id, d in ranked
+    ]

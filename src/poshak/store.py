@@ -5,7 +5,6 @@ prepare_matrix). Descriptor paths stay as strings; pixels are never
 held. Entry dict shape matches the prototype's index entries."""
 
 import sqlite3
-from typing import Optional
 
 import numpy as np
 
@@ -76,11 +75,12 @@ def _seed_item_categories(conn) -> None:
     """INSERT OR IGNORE the config sets so a fresh DB knows the baseline items.
     OR IGNORE means an existing learned ('inferred') or 'manual' row is never
     clobbered, so this is safe to re-run on every startup."""
-    rows = ([(it, "cloth", "config") for it in config.CLOTH_ITEMS] +
-            [(it, "fabric", "config") for it in config.FABRIC_ITEMS])
+    rows = [(it, "cloth", "config") for it in config.CLOTH_ITEMS] + [
+        (it, "fabric", "config") for it in config.FABRIC_ITEMS
+    ]
     conn.executemany(
-        "INSERT OR IGNORE INTO item_categories (item, category, source) "
-        "VALUES (?, ?, ?)", rows)
+        "INSERT OR IGNORE INTO item_categories (item, category, source) VALUES (?, ?, ?)", rows
+    )
 
 
 def init_db(db_path: str) -> None:
@@ -108,14 +108,16 @@ def resolve_category(db_path: str, item: str) -> str:
     item = (item or "").strip()
     with connect(db_path) as conn:
         row = conn.execute(
-            "SELECT category FROM item_categories WHERE item = ? COLLATE NOCASE",
-            (item,)).fetchone()
+            "SELECT category FROM item_categories WHERE item = ? COLLATE NOCASE", (item,)
+        ).fetchone()
         if row is not None:
             return row["category"]
         cat = infer_category(item)
         conn.execute(
             "INSERT OR IGNORE INTO item_categories (item, category, source) "
-            "VALUES (?, ?, 'inferred')", (item, cat))
+            "VALUES (?, ?, 'inferred')",
+            (item, cat),
+        )
         conn.commit()
     return cat
 
@@ -138,7 +140,8 @@ def set_item_category(db_path: str, item: str, category: str) -> None:
             "VALUES (?, ?, 'manual') "
             "ON CONFLICT(item) DO UPDATE SET "
             "category=excluded.category, source='manual'",
-            (item, category))
+            (item, category),
+        )
         conn.commit()
 
 
@@ -150,9 +153,21 @@ def blob_to_vec(blob: bytes) -> np.ndarray:
     return np.frombuffer(blob, dtype=np.float32)
 
 
-def upsert_image(db_path, sku_id, designno, item, category, photo_name,
-                 rembg_name, orig_vec, rembg_vec, orig_desc, rembg_desc,
-                 model_tag, bg_engine=None) -> None:
+def upsert_image(
+    db_path,
+    sku_id,
+    designno,
+    item,
+    category,
+    photo_name,
+    rembg_name,
+    orig_vec,
+    rembg_vec,
+    orig_desc,
+    rembg_desc,
+    model_tag,
+    bg_engine=None,
+) -> None:
     with connect(db_path) as conn:
         conn.execute(
             """INSERT INTO images
@@ -165,9 +180,20 @@ def upsert_image(db_path, sku_id, designno, item, category, photo_name,
                  rembg_name=excluded.rembg_name, orig_vec=excluded.orig_vec,
                  rembg_vec=excluded.rembg_vec, orig_desc=excluded.orig_desc,
                  rembg_desc=excluded.rembg_desc, bg_engine=excluded.bg_engine""",
-            (sku_id, designno, item, category, photo_name, rembg_name,
-             vec_to_blob(orig_vec), vec_to_blob(rembg_vec) if rembg_vec is not None else None,
-             orig_desc, rembg_desc, model_tag, bg_engine),
+            (
+                sku_id,
+                designno,
+                item,
+                category,
+                photo_name,
+                rembg_name,
+                vec_to_blob(orig_vec),
+                vec_to_blob(rembg_vec) if rembg_vec is not None else None,
+                orig_desc,
+                rembg_desc,
+                model_tag,
+                bg_engine,
+            ),
         )
         conn.commit()
 
@@ -175,13 +201,13 @@ def upsert_image(db_path, sku_id, designno, item, category, photo_name,
 def delete_by_photo(db_path: str, photo_name: str, model_tag: str) -> int:
     with connect(db_path) as conn:
         cur = conn.execute(
-            "DELETE FROM images WHERE photo_name=? AND model_tag=?",
-            (photo_name, model_tag))
+            "DELETE FROM images WHERE photo_name=? AND model_tag=?", (photo_name, model_tag)
+        )
         conn.commit()
         return cur.rowcount
 
 
-def _stack(entries: list[dict]) -> Optional[np.ndarray]:
+def _stack(entries: list[dict]) -> np.ndarray | None:
     if not entries:
         return None
     return np.stack([e["embed"] for e in entries])
@@ -192,34 +218,40 @@ class IndexStore:
         self.cloth_bg: list[dict] = []
         self.cloth_orig: list[dict] = []
         self.fabric: list[dict] = []
-        self.cloth_bg_embeds: Optional[np.ndarray] = None
-        self.cloth_orig_embeds: Optional[np.ndarray] = None
-        self.fabric_embeds: Optional[np.ndarray] = None
+        self.cloth_bg_embeds: np.ndarray | None = None
+        self.cloth_orig_embeds: np.ndarray | None = None
+        self.fabric_embeds: np.ndarray | None = None
 
     def load(self, db_path: str, model_tag: str) -> dict:
         cloth_bg, cloth_orig, fabric = [], [], []
         with connect(db_path) as conn:
-            rows = conn.execute(
-                "SELECT * FROM images WHERE model_tag=?", (model_tag,)).fetchall()
+            rows = conn.execute("SELECT * FROM images WHERE model_tag=?", (model_tag,)).fetchall()
         for r in rows:
             orig = {
-                "sku_id": r["sku_id"], "designno": r["designno"] or "",
-                "item": r["item"] or "", "filename": r["photo_name"],
+                "sku_id": r["sku_id"],
+                "designno": r["designno"] or "",
+                "item": r["item"] or "",
+                "filename": r["photo_name"],
                 "json_filename": r["photo_name"],
-                "desc_path": r["orig_desc"], "embed": blob_to_vec(r["orig_vec"]),
+                "desc_path": r["orig_desc"],
+                "embed": blob_to_vec(r["orig_vec"]),
             }
             if r["category"] == "fabric":
                 fabric.append(orig)
             else:
                 cloth_orig.append(orig)
                 if r["rembg_vec"] is not None and r["rembg_desc"]:
-                    cloth_bg.append({
-                        "sku_id": r["sku_id"], "designno": r["designno"] or "",
-                        "item": r["item"] or "", "filename": r["rembg_name"],
-                        "json_filename": r["photo_name"],
-                        "desc_path": r["rembg_desc"],
-                        "embed": blob_to_vec(r["rembg_vec"]),
-                    })
+                    cloth_bg.append(
+                        {
+                            "sku_id": r["sku_id"],
+                            "designno": r["designno"] or "",
+                            "item": r["item"] or "",
+                            "filename": r["rembg_name"],
+                            "json_filename": r["photo_name"],
+                            "desc_path": r["rembg_desc"],
+                            "embed": blob_to_vec(r["rembg_vec"]),
+                        }
+                    )
         self.cloth_bg, self.cloth_orig, self.fabric = cloth_bg, cloth_orig, fabric
         self.cloth_bg_embeds = _stack(cloth_bg)
         self.cloth_orig_embeds = _stack(cloth_orig)
@@ -230,19 +262,25 @@ class IndexStore:
         return any(len(x) > 0 for x in (self.cloth_bg, self.cloth_orig, self.fabric))
 
     def stats(self) -> dict:
-        return {"cloth_bg": len(self.cloth_bg), "cloth_orig": len(self.cloth_orig),
-                "fabric": len(self.fabric), "model_tag": config.MODEL_TAG}
+        return {
+            "cloth_bg": len(self.cloth_bg),
+            "cloth_orig": len(self.cloth_orig),
+            "fabric": len(self.fabric),
+            "model_tag": config.MODEL_TAG,
+        }
 
 
 def list_skus(db_path: str, model_tag: str, page: int, page_size: int) -> dict:
     offset = (max(1, page) - 1) * page_size
     with connect(db_path) as conn:
         total = conn.execute(
-            "SELECT COUNT(*) FROM images WHERE model_tag=?", (model_tag,)).fetchone()[0]
+            "SELECT COUNT(*) FROM images WHERE model_tag=?", (model_tag,)
+        ).fetchone()[0]
         rows = conn.execute(
             "SELECT sku_id, item, designno, photo_name, rembg_name FROM images "
             "WHERE model_tag=? ORDER BY id LIMIT ? OFFSET ?",
-            (model_tag, page_size, offset)).fetchall()
+            (model_tag, page_size, offset),
+        ).fetchall()
     items = [dict(r) for r in rows]
     return {"total": total, "page": page, "page_size": page_size, "items": items}
 
@@ -252,12 +290,12 @@ def create_or_touch_job(db_path: str, batch_id: str) -> None:
         c.execute(
             "INSERT INTO index_jobs (batch_id, status) VALUES (?, 'running') "
             "ON CONFLICT(batch_id) DO UPDATE SET updated_at=datetime('now')",
-            (batch_id,))
+            (batch_id,),
+        )
         c.commit()
 
 
-def add_job_item(db_path, batch_id, photo_name, sku_id, designno, item,
-                 engine, force) -> None:
+def add_job_item(db_path, batch_id, photo_name, sku_id, designno, item, engine, force) -> None:
     with connect(db_path) as c:
         c.execute(
             """INSERT INTO index_job_items
@@ -267,12 +305,13 @@ def add_job_item(db_path, batch_id, photo_name, sku_id, designno, item,
                  status='queued', sku_id=excluded.sku_id, item=excluded.item,
                  designno=excluded.designno, bg_engine=excluded.bg_engine,
                  force=excluded.force, error=NULL, updated_at=datetime('now')""",
-            (batch_id, photo_name, sku_id, designno, item, engine,
-             1 if force else 0))
+            (batch_id, photo_name, sku_id, designno, item, engine, 1 if force else 0),
+        )
         c.execute(
             "UPDATE index_jobs SET total=(SELECT COUNT(*) FROM index_job_items "
             "WHERE batch_id=?), updated_at=datetime('now') WHERE batch_id=?",
-            (batch_id, batch_id))
+            (batch_id, batch_id),
+        )
         c.commit()
 
 
@@ -281,15 +320,15 @@ def set_item_status(db_path, batch_id, photo_name, status, error=None) -> None:
         c.execute(
             "UPDATE index_job_items SET status=?, error=?, "
             "updated_at=datetime('now') WHERE batch_id=? AND photo_name=?",
-            (status, error, batch_id, photo_name))
+            (status, error, batch_id, photo_name),
+        )
         c.commit()
 
 
 def bump_engine(db_path, batch_id, engine_used) -> None:
     col = "api_count" if engine_used == "api" else "local_count"
     with connect(db_path) as c:
-        c.execute(f"UPDATE index_jobs SET {col}={col}+1 WHERE batch_id=?",
-                  (batch_id,))
+        c.execute(f"UPDATE index_jobs SET {col}={col}+1 WHERE batch_id=?", (batch_id,))
         c.commit()
 
 
@@ -298,35 +337,35 @@ def refresh_job_counts(db_path, batch_id) -> None:
         row = c.execute(
             "SELECT SUM(status='done'), SUM(status='failed'), "
             "SUM(status='skipped'), COUNT(*) FROM index_job_items WHERE batch_id=?",
-            (batch_id,)).fetchone()
-        done, failed, skipped, total = (row[0] or 0, row[1] or 0,
-                                        row[2] or 0, row[3] or 0)
-        status = "done" if total > 0 and (done + failed + skipped) >= total \
-            else "running"
+            (batch_id,),
+        ).fetchone()
+        done, failed, skipped, total = (row[0] or 0, row[1] or 0, row[2] or 0, row[3] or 0)
+        status = "done" if total > 0 and (done + failed + skipped) >= total else "running"
         c.execute(
             "UPDATE index_jobs SET done=?, failed=?, skipped=?, status=?, "
             "updated_at=datetime('now') WHERE batch_id=?",
-            (done, failed, skipped, status, batch_id))
+            (done, failed, skipped, status, batch_id),
+        )
         c.commit()
 
 
 def list_pending_items(db_path: str) -> list[dict]:
     with connect(db_path) as c:
         rows = c.execute(
-            "SELECT * FROM index_job_items WHERE status IN ('queued','running') "
-            "ORDER BY id").fetchall()
+            "SELECT * FROM index_job_items WHERE status IN ('queued','running') ORDER BY id"
+        ).fetchall()
     return [dict(r) for r in rows]
 
 
 def get_job(db_path: str, batch_id: str):
     with connect(db_path) as c:
-        job = c.execute("SELECT * FROM index_jobs WHERE batch_id=?",
-                        (batch_id,)).fetchone()
+        job = c.execute("SELECT * FROM index_jobs WHERE batch_id=?", (batch_id,)).fetchone()
         if job is None:
             return None
         errs = c.execute(
             "SELECT photo_name, error FROM index_job_items "
-            "WHERE batch_id=? AND status='failed' ORDER BY id", (batch_id,)
+            "WHERE batch_id=? AND status='failed' ORDER BY id",
+            (batch_id,),
         ).fetchall()
     d = dict(job)
     d["errors"] = [dict(e) for e in errs]

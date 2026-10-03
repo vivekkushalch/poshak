@@ -15,16 +15,20 @@ def _image(seed: int, h: int = 400, w: int = 300) -> np.ndarray:
         color = tuple(int(c) for c in rng.randint(0, 255, size=3))
         x, y = int(rng.randint(0, w)), int(rng.randint(0, h))
         if rng.rand() < 0.5:
-            cv2.rectangle(img, (x, y), (x + int(rng.randint(8, 60)), y + int(rng.randint(8, 60))),
-                          color, -1)
+            cv2.rectangle(
+                img, (x, y), (x + int(rng.randint(8, 60)), y + int(rng.randint(8, 60))), color, -1
+            )
         else:
             cv2.circle(img, (x, y), int(rng.randint(4, 30)), color, -1)
     return img
 
 
 def fake_embed(img: np.ndarray) -> np.ndarray:
-    small = cv2.resize(cv2.cvtColor(img, cv2.COLOR_RGB2GRAY), (8, 8),
-                       interpolation=cv2.INTER_AREA).astype(np.float32).flatten()
+    small = (
+        cv2.resize(cv2.cvtColor(img, cv2.COLOR_RGB2GRAY), (8, 8), interpolation=cv2.INTER_AREA)
+        .astype(np.float32)
+        .flatten()
+    )
     small -= small.mean()
     return small / (np.linalg.norm(small) or 1.0)
 
@@ -43,8 +47,14 @@ def catalog() -> list[dict]:
     for sku in range(1, 11):
         category = "cloth" if sku <= 6 else "fabric"
         for k in range(2):
-            rows.append({"sku_id": sku, "category": category, "photo": f"{sku}_{k}.jpg",
-                         "image": _image(sku * 100 + k)})
+            rows.append(
+                {
+                    "sku_id": sku,
+                    "category": category,
+                    "photo": f"{sku}_{k}.jpg",
+                    "image": _image(sku * 100 + k),
+                }
+            )
     return rows
 
 
@@ -53,11 +63,13 @@ def queries() -> dict[str, tuple[str, np.ndarray]]:
     base = {r["photo"]: r["image"] for r in catalog()}
 
     def noisy(img):
-        return np.clip(img.astype(np.int16) + rng.randint(-12, 12, img.shape), 0, 255).astype(np.uint8)
+        return np.clip(img.astype(np.int16) + rng.randint(-12, 12, img.shape), 0, 255).astype(
+            np.uint8
+        )
 
     def crop(img):
         h, w = img.shape[:2]
-        return cv2.resize(img[h // 8:, w // 10:], (w, h), interpolation=cv2.INTER_AREA)
+        return cv2.resize(img[h // 8 :, w // 10 :], (w, h), interpolation=cv2.INTER_AREA)
 
     return {
         "cloth_noisy": ("cloth", noisy(base["2_0.jpg"])),
@@ -73,9 +85,12 @@ def queries() -> dict[str, tuple[str, np.ndarray]]:
 def summarize(category: str, results: list[dict]) -> list[dict]:
     out = []
     for r in results:
-        row = {"sku_id": r["sku_id"], "total_sift_matches": r["total_sift_matches"],
-               "unified_score": round(float(r["unified_score"]), 9),
-               "best": (r["best_entry"] or {}).get("json_filename")}
+        row = {
+            "sku_id": r["sku_id"],
+            "total_sift_matches": r["total_sift_matches"],
+            "unified_score": round(float(r["unified_score"]), 9),
+            "best": (r["best_entry"] or {}).get("json_filename"),
+        }
         if category == "cloth":
             row.update(bg_sift=r["bg_sift"], orig_sift=r["orig_sift"], both_found=r["both_found"])
         else:

@@ -16,7 +16,7 @@ services:
       IMAGE_BASE_URL: ${IMAGE_BASE_URL:-}
       REMBG_API_URL: ${REMBG_API_URL:-}
     volumes:
-      - ./service:/app/service          # live edit
+      - ./src/poshak:/app/poshak         # live edit
       - ./scripts:/app/scripts
       - ./.localdata:/data              # sqlite + descriptors + ledger
       - ./.localcorpus:/corpus          # uploads + rmbg

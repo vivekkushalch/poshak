@@ -26,7 +26,6 @@ from transformers import AutoModel, AutoProcessor
 from . import config
 from .debug import timed
 
-
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Halve torch's intra-op threads so two parallel siglip_embed calls
@@ -49,6 +48,7 @@ def _ensure_loaded():
         if hasattr(m, "text_model"):
             m.text_model = None
         import gc as _gc
+
         _gc.collect()
         _model = m
     return _processor, _model
