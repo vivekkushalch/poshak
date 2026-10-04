@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Opt-in `RANKER=v2`** for small catalogs: whole-catalog coarse SIFT pass, mutual-match
+  counting, early stop, lazy embedding, no cutout pass. About 7x faster cloth search and
+  higher accuracy on the test sets (README, ADR 0006). Default stays `legacy`; v2 serves a
+  category only while it has at most `V2_MAX_VIEWS` (1000) photos. New descriptor format
+  (strongest keypoints first, uint8) read by both rankers, `poshak refresh-descriptors`,
+  and `ranker`, `ranker_active` and `descriptors_to_refresh` on `/health`.
+- `bench/lab.py` (offline experiments with a tuning/test split), `bench/compare_rankers.py`
+  (end-to-end timing), `bench/evaluate.py` and `bench/prepare_deepfashion.py`.
 - Admin UI rebuilt as a tabbed app: Catalog (photo and cutout side by side, filter,
   page size, replace and delete with an in-page confirmation), Upload (drag and drop,
   batch fields, live indexing progress), Jobs (progress bars, per-photo errors,

@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class IndexStats(BaseModel):
@@ -16,6 +16,14 @@ class HealthResponse(BaseModel):
     embed_dim: int
     index: IndexStats
     index_ready: bool
+    ranker: Literal["legacy", "v2"] = "legacy"
+    ranker_active: dict[str, str] = Field(
+        default_factory=dict,
+        description="Ranker serving each category now; v2 falls back to legacy on large catalogs",
+    )
+    descriptors_to_refresh: int | None = Field(
+        None, description="v2 only: descriptor files `poshak refresh-descriptors` should rewrite"
+    )
 
 
 class ClientConfig(BaseModel):

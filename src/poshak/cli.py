@@ -1,4 +1,4 @@
-"""Command line: `poshak serve` and `poshak seed`."""
+"""Command line: `poshak serve`, `poshak seed` and `poshak refresh-descriptors`."""
 
 import argparse
 import json
@@ -60,6 +60,20 @@ def _seed(args: argparse.Namespace) -> int:
     return 0 if stats["failed"] == 0 else 1
 
 
+def _refresh_descriptors(args: argparse.Namespace) -> int:
+    """Rewrite all stored descriptors in the format the current RANKER needs."""
+    from .container import Container
+    from .core.config import get_settings
+
+    c = Container.build(get_settings())
+    c.startup(start_worker=False)
+    try:
+        print(json.dumps(c.indexer.refresh_descriptors()))
+    finally:
+        c.shutdown()
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="poshak", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -73,6 +87,12 @@ def main(argv: list[str] | None = None) -> int:
     seed.add_argument("--json", required=True, help="catalog JSON path")
     seed.add_argument("--force", action="store_true", help="re-index already indexed photos")
     seed.set_defaults(func=_seed)
+
+    refresh = sub.add_parser(
+        "refresh-descriptors",
+        help="rewrite stored SIFT descriptors in the current RANKER's format (no re-embedding)",
+    )
+    refresh.set_defaults(func=_refresh_descriptors)
 
     args = parser.parse_args(argv)
     configure_logging("INFO")

@@ -183,6 +183,44 @@ dataset and is the next milestone on the [roadmap](#roadmap). Reproduce with:
 uv run python bench/latency.py && uv run python bench/charts.py
 ```
 
+### Faster and more accurate on small catalogs: `RANKER=v2`
+
+For catalogs of up to about a thousand photos, the opt-in v2 ranker replaces the
+second background-removal pass with a cheap whole-catalog SIFT pass, counts only mutual
+matches, and stops as soon as the leading SKU is clear. The embedding is computed only
+when the cheap stages cannot decide. Enable it with `RANKER=v2` and run
+`poshak refresh-descriptors` once ([ADR 0006](docs/adr/0006-progressive-ranking.md)).
+
+Accuracy is recall@1 on held-out test queries that were never used to choose a setting.
+"Re-shots" are indexed photos degraded to look like a customer's phone photo (crop, tilt,
+exposure, blur, heavy JPEG).
+
+| Query | n | Legacy | v2 |
+|---|---|---|---|
+| **Real shop catalog** (408 SKUs, 12 MP phone photos) | | | |
+| Cloth, mild re-shot | 100 | 96% | **98%** |
+| Cloth, heavy re-shot | 100 | 89% | **93%** |
+| Fabric, both levels | 50 | 92% | **96%** |
+| A different photo of the same SKU | 99 | 30% | **37%** |
+| **DeepFashion In-shop sample** (224 px studio photos) | | | |
+| Mild re-shot | 37 | 95% | **100%** |
+| Heavy re-shot | 37 | 38% | **65%** |
+| A different view of the same item | 73 | 52% | **78%** |
+
+Search time through the real services on the same laptop CPU (i5-7200U, no GPU), measured on
+only 3 queries per group, so read it as a ballpark:
+
+| Search | Legacy | v2 |
+|---|---|---|
+| Cloth | 5.3 to 5.6 s | **0.7 s** |
+| Fabric | 1.5 to 1.7 s | **0.5 s** |
+
+Limits worth knowing: the re-shots are simulated, so real customer photos will score lower;
+the catalog is one shop and mostly sherwanis; and on DeepFashion cross-view photos the
+embedding alone (95%) still beats both rankers, so v2's blend of embedding and geometry is a
+compromise between the two kinds of data. Reproduce with `bench/lab.py` (accuracy) and
+`bench/compare_rankers.py` (timing).
+
 ## Architecture
 
 <picture>

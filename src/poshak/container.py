@@ -4,6 +4,7 @@ Container.build() turns Settings into a fully wired object graph. Tests and
 alternative deployments pass overrides (an in-memory blob store, a fake
 embedder) instead of monkeypatching module globals."""
 
+import threading
 from dataclasses import dataclass
 
 from .core.config import Settings
@@ -82,17 +83,20 @@ class Container:
         originals, cutouts, descriptors = blobs or _blob_stores(s)
         embedder = embedder or SiglipEmbedder(s.embed_model_id)
         local = U2NetRemover()
-        state = IndexState(images, descriptors, s.model_tag, NumpyIndex.from_rows)
+        state = IndexState(
+            images, descriptors, s.model_tag, NumpyIndex.from_rows, build_banks=s.ranker == "v2"
+        )
         catalog = CatalogService(SqliteCategoryRepository(db), images, s.model_tag)
         indexer = IndexerService(
             images=images, catalog=catalog, originals=originals, cutouts=cutouts,
             descriptors=descriptors, embedder=embedder,
             remover=index_remover or _index_remover(s, local), state=state,
-            model_tag=s.model_tag, working_max_h=s.working_max_h,
+            model_tag=s.model_tag, working_max_h=s.working_max_h, by_response=s.ranker == "v2",
         )  # fmt: skip
         search = SearchService(
             state, embedder, query_remover or local, working_max_h=s.working_max_h,
             max_concurrent=s.max_concurrent_searches, sift_workers=s.sift_workers,
+            ranker=s.ranker, v2_max_views=s.v2_max_views,
         )  # fmt: skip
         jobs = JobService(indexer, SqliteJobRepository(db), state)
         return cls(
@@ -103,6 +107,11 @@ class Container:
         self.db.init()
         self.catalog.seed_defaults(self.settings.cloth_items, self.settings.fabric_items)
         self.state.reload()
+        # v2 computes the embedding only for queries the cheap stages can't settle, so without
+        # this the first such query would also pay the model load (about 15 s on a small CPU)
+        warm_up = getattr(self.embedder, "warm_up", None)
+        if self.settings.ranker == "v2" and warm_up:
+            threading.Thread(target=warm_up, name="embedder-warmup", daemon=True).start()
         if start_worker:
             self.jobs.start()
             resumed = self.jobs.resume()

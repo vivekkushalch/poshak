@@ -1,0 +1,202 @@
+{
+ "cloth_noisy": [
+  {
+   "sku_id": 2,
+   "matches": 80,
+   "score": 80.0,
+   "best": "2_0.jpg"
+  },
+  {
+   "sku_id": 4,
+   "matches": 16,
+   "score": 16.0,
+   "best": "4_1.jpg"
+  },
+  {
+   "sku_id": 1,
+   "matches": 13,
+   "score": 13.0,
+   "best": "1_1.jpg"
+  },
+  {
+   "sku_id": 6,
+   "matches": 11,
+   "score": 11.0,
+   "best": "6_1.jpg"
+  }
+ ],
+ "cloth_crop": [
+  {
+   "sku_id": 4,
+   "matches": 109,
+   "score": 109.0,
+   "best": "4_1.jpg"
+  },
+  {
+   "sku_id": 2,
+   "matches": 22,
+   "score": 22.0,
+   "best": "2_1.jpg"
+  },
+  {
+   "sku_id": 6,
+   "matches": 21,
+   "score": 21.0,
+   "best": "6_1.jpg"
+  },
+  {
+   "sku_id": 5,
+   "matches": 19,
+   "score": 19.0,
+   "best": "5_0.jpg"
+  },
+  {
+   "sku_id": 3,
+   "matches": 16,
+   "score": 16.0,
+   "best": "3_0.jpg"
+  }
+ ],
+ "cloth_flip": [
+  {
+   "sku_id": 5,
+   "matches": 42,
+   "score": 42.0,
+   "best": "5_0.jpg"
+  },
+  {
+   "sku_id": 2,
+   "matches": 20,
+   "score": 20.0,
+   "best": "2_1.jpg"
+  },
+  {
+   "sku_id": 4,
+   "matches": 18,
+   "score": 18.0,
+   "best": "4_1.jpg"
+  },
+  {
+   "sku_id": 1,
+   "matches": 16,
+   "score": 16.0,
+   "best": "1_0.jpg"
+  },
+  {
+   "sku_id": 6,
+   "matches": 11,
+   "score": 11.0,
+   "best": "6_1.jpg"
+  }
+ ],
+ "cloth_unrelated": [
+  {
+   "sku_id": 2,
+   "matches": 17,
+   "score": 0.784478,
+   "best": "2_0.jpg"
+  },
+  {
+   "sku_id": 1,
+   "matches": 17,
+   "score": 0.727917,
+   "best": "1_1.jpg"
+  },
+  {
+   "sku_id": 3,
+   "matches": 15,
+   "score": 0.667547,
+   "best": "3_1.jpg"
+  },
+  {
+   "sku_id": 6,
+   "matches": 14,
+   "score": 0.464685,
+   "best": "6_1.jpg"
+  },
+  {
+   "sku_id": 4,
+   "matches": 12,
+   "score": 0.265711,
+   "best": "4_1.jpg"
+  }
+ ],
+ "fabric_noisy": [
+  {
+   "sku_id": 8,
+   "matches": 132,
+   "score": 132.0,
+   "best": "8_1.jpg"
+  },
+  {
+   "sku_id": 10,
+   "matches": 23,
+   "score": 23.0,
+   "best": "10_0.jpg"
+  },
+  {
+   "sku_id": 7,
+   "matches": 20,
+   "score": 20.0,
+   "best": "7_0.jpg"
+  },
+  {
+   "sku_id": 9,
+   "matches": 17,
+   "score": 17.0,
+   "best": "9_0.jpg"
+  }
+ ],
+ "fabric_crop": [
+  {
+   "sku_id": 9,
+   "matches": 113,
+   "score": 113.0,
+   "best": "9_0.jpg"
+  },
+  {
+   "sku_id": 7,
+   "matches": 21,
+   "score": 21.0,
+   "best": "7_0.jpg"
+  },
+  {
+   "sku_id": 8,
+   "matches": 17,
+   "score": 17.0,
+   "best": "8_0.jpg"
+  },
+  {
+   "sku_id": 10,
+   "matches": 15,
+   "score": 15.0,
+   "best": "10_0.jpg"
+  }
+ ],
+ "fabric_unrelated": [
+  {
+   "sku_id": 9,
+   "matches": 13,
+   "score": 0.526456,
+   "best": "9_1.jpg"
+  },
+  {
+   "sku_id": 10,
+   "matches": 9,
+   "score": 0.470482,
+   "best": "10_1.jpg"
+  },
+  {
+   "sku_id": 8,
+   "matches": 11,
+   "score": 0.34855,
+   "best": "8_1.jpg"
+  },
+  {
+   "sku_id": 7,
+   "matches": 6,
+   "score": 0.247416,
+   "best": "7_1.jpg"
+  }
+ ]
+}

@@ -24,6 +24,16 @@ def compute_descriptors(img_rgb: np.ndarray) -> tuple[np.ndarray, int]:
     return des.astype(np.float32), len(kp)
 
 
+def compute_descriptors_by_response(img_rgb: np.ndarray) -> tuple[np.ndarray, int]:
+    """The same keypoints as compute_descriptors, strongest first. RANKER=v2 stores and
+    queries this order so that the first K rows are a view's K best keypoints."""
+    kp, des = _sift().detectAndCompute(img_rgb, None)
+    if des is None:
+        return _EMPTY, 0
+    order = np.argsort([-k.response for k in kp], kind="stable")
+    return des[order].astype(np.float32), len(kp)
+
+
 def detect(img_rgb: np.ndarray) -> tuple[int, np.ndarray]:
     """Query-side form: (keypoint count, descriptors)."""
     des, n = compute_descriptors(img_rgb)
@@ -42,12 +52,26 @@ def match_descriptors(des_q, n_kp_q, des_c, n_kp_c) -> tuple[float, int, int]:
     return float(good / denom if denom else 0.0), good, n_kp_q
 
 
-def dumps(des: np.ndarray, n_kp: int) -> bytes:
+def dumps(des: np.ndarray, n_kp: int, *, by_response: bool = False) -> bytes:
+    """Serialise one view's descriptors. SIFT descriptors are integers in 0..255, so
+    response-ordered (v2) files store uint8; the legacy format is unchanged."""
     buf = io.BytesIO()
-    np.savez_compressed(buf, des=des, n_kp=np.int32(n_kp))
+    if by_response:
+        np.savez_compressed(
+            buf, des=des.astype(np.uint8), n_kp=np.int32(n_kp), by_response=np.bool_(True)
+        )
+    else:
+        np.savez_compressed(buf, des=des, n_kp=np.int32(n_kp))
     return buf.getvalue()
 
 
-def loads(data: bytes) -> tuple[np.ndarray, int]:
+def loads_ex(data: bytes) -> tuple[np.ndarray, int, bool]:
+    """(descriptors, keypoint count, whether the rows are strongest-first)."""
     with np.load(io.BytesIO(data)) as z:
-        return z["des"].astype(np.float32), int(z["n_kp"])
+        ordered = bool(z["by_response"]) if "by_response" in z.files else False
+        return z["des"].astype(np.float32), int(z["n_kp"]), ordered
+
+
+def loads(data: bytes) -> tuple[np.ndarray, int]:
+    des, n_kp, _ = loads_ex(data)
+    return des, n_kp

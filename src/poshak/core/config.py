@@ -57,6 +57,13 @@ class Settings(BaseSettings):
     cloth_items: frozenset[str] = DEFAULT_CLOTH_ITEMS
     fabric_items: frozenset[str] = DEFAULT_FABRIC_ITEMS
 
+    # ranking: "legacy" is the original two-pass pipeline, "v2" the progressive ranker for
+    # small catalogs (docs/adr/0006). v2 is used only while the catalog has at most
+    # v2_max_views searchable photos; above that, searches fall back to legacy, because v2
+    # was evaluated on a few hundred photos and its whole-catalog coarse pass grows linearly.
+    ranker: Literal["legacy", "v2"] = "legacy"
+    v2_max_views: int = Field(1000, ge=1)
+
     # serving
     image_base_url: str = ""
     max_concurrent_searches: int = Field(2, ge=1)

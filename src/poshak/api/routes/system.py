@@ -20,6 +20,13 @@ def health(c: ContainerDep) -> dict:
         "embed_dim": c.embedder.dim,
         "index": {**snap.stats(), "model_tag": c.settings.model_tag},
         "index_ready": snap.ready,
+        "ranker": c.settings.ranker,
+        "ranker_active": {k: c.search.active_ranker(k) for k in ("cloth", "fabric")},
+        "descriptors_to_refresh": (
+            snap.descriptors_ordered[1] - snap.descriptors_ordered[0]
+            if c.settings.ranker == "v2"
+            else None
+        ),
     }
 
 

@@ -324,6 +324,18 @@ Results sort by total good matches, then by `unified`. The constants were tuned
 together on the original catalog. Change them only with an evaluation set
 ([ADR 0001](adr/0001-sift-verification.md)).
 
+### 8.1 The v2 ranker (opt-in)
+
+With `RANKER=v2` and at most `V2_MAX_VIEWS` photos in the category, ranking is progressive
+instead of the pipeline above. Stage 1 matches the query's strongest 300 keypoints against
+every view's strongest 300 (no embedding needed) and fully matches the best 5 views. A match
+counts only if it passes the 0.75 ratio test and is a mutual nearest neighbour. If the
+leader has at least 16 matches and 1.5 times the runner-up's, the search ends. Otherwise it
+computes the embedding and widens to coarse 10 plus embedding 10, then coarse 20 plus
+embedding 30, scoring each SKU's best photo as `m / (m + 20) + 1.5 * cosine`. There is no
+cutout pass. Rationale and evidence: [ADR 0006](adr/0006-progressive-ranking.md); code:
+`engine/v2.py`. Above the view limit, searches use the legacy path.
+
 ## 9. Quality attributes
 
 ### 9.1 Latency

@@ -54,6 +54,21 @@ descriptor cache. Each running search holds the decoded query, its cutout and th
 candidates' descriptors, which is why `MAX_CONCURRENT_SEARCHES` defaults to 2 on a
 2 GB box. Measured numbers will come with the benchmark.
 
+## Faster search on small catalogs (RANKER=v2)
+
+For catalogs of up to about a thousand photos, set `RANKER=v2` and run the descriptor
+refresh once. It does not re-embed anything and takes about 0.2 s per photo:
+
+```bash
+poshak refresh-descriptors
+```
+
+`/health` then reports `"ranker": "v2"`, which ranker serves each category in
+`ranker_active`, and `descriptors_to_refresh` (0 when every file is in the new format).
+While a category has more than `V2_MAX_VIEWS` photos (default 1000), its searches use the
+legacy ranker automatically. Newly indexed photos are written in the new format. Go back
+with `RANKER=legacy`; both formats stay readable. See [ADR 0006](adr/0006-progressive-ranking.md).
+
 ## Upgrading from 0.2
 
 - The package moved from `service` to `poshak`. The start command is `poshak serve`.

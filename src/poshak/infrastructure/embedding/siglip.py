@@ -39,6 +39,10 @@ class SiglipEmbedder:
                 self._model = model
         return self._processor, self._model
 
+    def warm_up(self) -> None:
+        """Load the model now instead of inside the first search that needs it."""
+        self._load()
+
     def embed(self, img_rgb: np.ndarray) -> np.ndarray:
         import torch
 

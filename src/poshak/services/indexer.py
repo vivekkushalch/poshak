@@ -39,6 +39,7 @@ class IndexerService:
         state: IndexState,
         model_tag: str,
         working_max_h: int = 768,
+        by_response: bool = False,
     ) -> None:
         self._images = images
         self._catalog = catalog
@@ -50,6 +51,7 @@ class IndexerService:
         self._state = state
         self._model_tag = model_tag
         self._max_h = working_max_h
+        self._by_response = by_response  # RANKER=v2 stores strongest-first descriptors
         self._lock = threading.Lock()
 
     # --- features ---------------------------------------------------------------
@@ -57,9 +59,15 @@ class IndexerService:
         """Embed + SIFT-describe one view at working resolution; store its descriptors."""
         view = to_working_res(img_rgb, self._max_h)
         vec = self._embedder.embed(view)
-        des, n_kp = sift.compute_descriptors(view)
-        self._descriptors.put(key, sift.dumps(des, n_kp))
+        self._put_descriptors(key, view)
         return vec
+
+    def _put_descriptors(self, key: str, view) -> None:
+        if self._by_response:
+            des, n_kp = sift.compute_descriptors_by_response(view)
+        else:
+            des, n_kp = sift.compute_descriptors(view)
+        self._descriptors.put(key, sift.dumps(des, n_kp, by_response=self._by_response))
 
     def _build(
         self, photo_name, full, *, sku_id, designno, item, category: Category,
@@ -142,6 +150,27 @@ class IndexerService:
             self._images.upsert(rec)
             self._state.reload()
         return {"status": "replaced", "photo_name": photo_name, "kind": kind}
+
+    def refresh_descriptors(self) -> dict[str, int]:
+        """Rewrite every indexed photo's descriptors in the current format from the stored
+        originals and cutouts. SIFT only: no embedding and no background removal, so it is
+        fast (about 0.2 s per view) and leaves search results' embeddings untouched."""
+        done = missing = 0
+        with self._lock:
+            for rec in self._images.all(self._model_tag):
+                views = [(rec.photo_name, self._originals, rec.orig_desc)]
+                if rec.rembg_name and rec.rembg_desc:
+                    views.append((rec.rembg_name, self._cutouts, rec.rembg_desc))
+                for name, store, key in views:
+                    try:
+                        img = to_working_res(decode_rgb(store.get(name)), self._max_h)
+                    except NotFound:
+                        missing += 1
+                        continue
+                    self._put_descriptors(key, img)
+                    done += 1
+            self._state.reload()
+        return {"refreshed": done, "missing": missing}
 
     def forget(self, photo_name: str) -> dict[str, int]:
         orig_key, cut_key = descriptor_keys(photo_name)
