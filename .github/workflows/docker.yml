@@ -1,0 +1,61 @@
+name: docker
+
+# Builds the image and exercises it with the real models: ingest, index, search, health.
+# Runs on main, and on pull requests that can change what the image contains.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - Dockerfile
+      - pyproject.toml
+      - uv.lock
+      - compose*.yaml
+      - .env.example
+      - src/**
+      - tests/smoke/**
+      - .github/workflows/docker.yml
+  workflow_dispatch:
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compose files are valid
+        run: |
+          cp .env.example .env
+          docker compose -f compose.yaml config -q
+          docker compose -f compose.prod.yaml config -q
+
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          push: false
+          tags: poshak:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Start the container
+        run: docker run -d --name poshak -p 8088:8088 -e DISABLE_AUTH=1 poshak:ci
+
+      - name: Wait until it answers
+        run: curl -fsS --retry 40 --retry-delay 3 --retry-connrefused http://127.0.0.1:8088/health/live
+
+      - name: Smoke test (runs inside the image)
+        run: docker exec -i poshak python - http://127.0.0.1:8088 < tests/smoke/docker_smoke.py
+
+      - name: Container logs
+        if: failure()
+        run: docker logs poshak

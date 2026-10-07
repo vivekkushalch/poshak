@@ -3,7 +3,7 @@
 #   docker compose -f compose.prod.yaml pull && docker compose -f compose.prod.yaml up -d
 services:
   poshak:
-    image: kent997/poshak:latest
+    image: ghcr.io/vivekkushalch/poshak:latest  # published by the release workflow on a v* tag
     container_name: poshak
     restart: unless-stopped
     ports:

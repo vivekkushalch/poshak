@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Living document, describes `main` |
 | **Version** | 0.3 |
-| **Last reviewed** | 2026-10-03 |
+| **Last reviewed** | 2026-10-07 |
 | **Audience** | Engineers running, extending or reviewing poshak |
 
 **Contents**

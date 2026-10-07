@@ -13,6 +13,10 @@ docker compose -f compose.prod.yaml up -d
 curl localhost:8088/health
 ```
 
+`compose.prod.yaml` pulls `ghcr.io/vivekkushalch/poshak`, which the release workflow publishes
+when a `v*` tag is pushed (see [Releasing](#releasing)). Until a release exists, build the
+image yourself with `docker compose up -d --build`.
+
 Put photos in `~/poshak/corpus/uploads` and run `poshak seed` inside the container,
 or send them through `POST /ingest`.
 
@@ -79,3 +83,19 @@ with `RANKER=legacy`; both formats stay readable. See [ADR 0006](adr/0006-progre
 - `API_KEY` is now required at startup unless `DISABLE_AUTH=1`.
 - The existing index keeps working. On first start a migration rewrites stored
   descriptor paths to plain keys, and the model tag is unchanged.
+
+## Releasing
+
+1. Move the `Unreleased` entries in `CHANGELOG.md` under a new `## X.Y.Z` heading and set the
+   same version in `pyproject.toml` (and `CITATION.cff`).
+2. Tag and push: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+
+The release workflow refuses a tag that does not match `pyproject.toml` or has no changelog
+section, runs the tests, publishes the image to GitHub Container Registry (and to Docker Hub
+when the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` secrets exist), and creates the GitHub
+release with that changelog section as its notes. The first time, open the package under the
+repository's **Packages** and set its visibility to public, or nobody else can pull it.
+
+The `docker` workflow builds the image on every push to `main` (and on pull requests that touch
+the Dockerfile, dependencies or source) and runs `tests/smoke/docker_smoke.py` inside it:
+ingest, index, search and health with the real models.

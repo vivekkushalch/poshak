@@ -293,6 +293,8 @@ first request.
 | `REMBG_API_URL` | | Optional remote background removal at index time |
 | `MAX_CONCURRENT_SEARCHES` | `2` | Extra searches wait 10 s, then get `503` |
 | `SIFT_WORKERS` | `4` | Threads for candidate verification |
+| `RANKER` | `legacy` | `v2` is the faster, more accurate ranker for small catalogs (see above) |
+| `V2_MAX_VIEWS` | `1000` | v2 serves a category only up to this many photos, then legacy takes over |
 | `LOG_LEVEL` | `INFO` | `DEBUG` logs per-stage timings |
 
 Everything else is in [.env.example](.env.example).
@@ -303,7 +305,7 @@ Everything else is in [.env.example](.env.example).
 
 ```bash
 uv sync
-uv run pytest -m "not slow"    # 141 tests, about a minute, no model downloads
+uv run pytest -m "not slow"    # the whole suite, about a minute, no model downloads
 uv run ruff check && uv run ruff format --check
 ```
 
@@ -317,7 +319,11 @@ suite, and S3 runs against [moto](https://github.com/getmoto/moto). See
 - [x] Two-stage retrieval with dual-view fusion
 - [x] Pluggable storage with S3 support
 - [x] Async, resumable ingest
-- [ ] Accuracy benchmark on a public fashion dataset (recall@k, MRR, ablations)
+- [x] Accuracy evaluation with a held-out test split (DeepFashion sample and one real catalog)
+- [x] Opt-in v2 ranker for small catalogs
+- [ ] A public Indian-wear retrieval benchmark (none exists with item identities)
+- [ ] Skip background removal at index time for v2-only deployments (about half the indexing time)
+- [ ] v2 beyond a thousand photos (an indexed coarse stage instead of a full scan)
 - [ ] ANN vector index for catalogs past a few hundred thousand photos
 - [ ] Postgres repositories and a shared queue for multi-node ingest
 - [ ] MCP server so agents can search a catalog
@@ -330,6 +336,10 @@ poshak stands on [SigLIP](https://arxiv.org/abs/2303.15343) (Zhai et al., 2023),
 [U²-Net](https://arxiv.org/abs/2005.09007) through [rembg](https://github.com/danielgatis/rembg),
 [OpenCV](https://opencv.org), [FastAPI](https://fastapi.tiangolo.com) and
 [Hugging Face Transformers](https://github.com/huggingface/transformers).
+
+The evaluation uses a sample of the [DeepFashion In-shop](https://mmlab.ie.cuhk.edu.hk/projects/DeepFashion.html)
+benchmark (Liu et al., 2016), a research dataset. Only aggregate metrics are published here and
+none of its images are redistributed; check its terms before you reuse it.
 
 ## Citation
 
