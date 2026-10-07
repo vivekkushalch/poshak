@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- README: a "See it work" section with real search results on 95 freely licensed photos
+  (embedding only vs poshak, over 190 re-shots), a keypoint-match figure, and
+  `docs/demo/build_demo.py` to rebuild them. Photo credits in `docs/demo/ATTRIBUTION.md`.
 - **Opt-in `RANKER=v2`** for small catalogs: whole-catalog coarse SIFT pass, mutual-match
   counting, early stop, lazy embedding, no cutout pass. About 7x faster cloth search and
   higher accuracy on the test sets (README, ADR 0006). Default stays `legacy`; v2 serves a

@@ -34,6 +34,31 @@ They are bad at "*that* long embroidered jacket". In an Indian wear catalog,
 hundreds of pieces share a cut and a colour and differ only in their zari,
 butis and borders. poshak uses an embedding to shortlist and SIFT to decide.
 
+## See it work
+
+<img alt="Three searches by re-shot photo. An embedding-only search returns lookalikes; poshak returns the exact photo with hundreds of matching keypoints." src="docs/assets/demo/search-demo.jpg" width="100%">
+
+This is real output, not a mock-up. Each row is one search: the query on the left, what an
+embedding-only search returns in the middle (red: a different photo), what poshak returns on the
+right (green: the right photo, with its match count).
+
+| Right photo ranked first | Embedding only | poshak |
+|---|---|---|
+| All 190 re-shots | 121 (64%) | **178 (94%)** |
+| Mild re-shots (95) | 73 | **93** |
+| Heavy re-shots (95) | 48 | **85** |
+
+- The gallery is 95 photographs of Indian textiles and garments from Wikimedia Commons (CC0,
+  public domain or CC BY, [credits](docs/demo/ATTRIBUTION.md)), with whole families of
+  near-identical pieces.
+- A query is a re-shot of one gallery photo: cropped, tilted, darker, blurred and re-compressed.
+  That is easier than a second photograph of the same object; the [benchmarks](#benchmarks) below
+  include that harder case.
+- poshak ran with `RANKER=v2`. Its settings were fixed on a different, private catalog before this
+  gallery existed. Nothing was tuned on these photos.
+- Rebuild it all with `uv run python docs/demo/build_demo.py --out docs/assets/demo`. It downloads
+  the photos, runs the real SigLIP model and redraws both figures.
+
 ## Highlights
 
 - **Two-stage retrieval.** SigLIP cosine recalls 40 candidates. Lowe-ratio SIFT
@@ -142,6 +167,12 @@ uv run poshak seed --json catalog.json   # resumable; --force re-indexes
 Results sort by total SIFT matches, then by the fused score. The constants were
 tuned together on the original catalog; [ADR 0001](docs/adr/0001-sift-verification.md)
 explains why ranking works this way.
+
+<img alt="Matching keypoints between a query and the right photo (hundreds of lines) versus the lookalike an embedding ranks first (one line)" src="docs/assets/demo/match-lines.jpg" width="100%">
+
+The right photo shares hundreds of local keypoints with the query. The lookalike an embedding
+prefers shares almost none. The counts are the search's own; the lines are redrawn at a smaller
+size, so a few matches in the count may not show as lines.
 
 ## Benchmarks
 
