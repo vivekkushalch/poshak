@@ -14,6 +14,7 @@ services:
       RMBG_DIR: /corpus/rmbg
       IMAGE_BASE_URL: ${IMAGE_BASE_URL:-}
       REMBG_API_URL: ${REMBG_API_URL:-}
+      RANKER: ${RANKER:-legacy}
       LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
     volumes:
       - ./.localdata:/data

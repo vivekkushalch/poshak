@@ -1,0 +1,798 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>poshak: find the exact piece, not one that looks like it</title>
+<meta name="description" content="Open-source visual search for Indian wear. Embeddings find lookalikes; poshak matches the zari and finds the exact piece. Runs on a 2 GB CPU box.">
+<meta name="theme-color" content="#100f22">
+<link rel="icon" type="image/svg+xml" href="assets/brand/favicon.svg">
+<meta property="og:type" content="website">
+<meta property="og:title" content="poshak: find the exact piece, not one that looks like it">
+<meta property="og:description" content="Embeddings find lookalikes. poshak matches the zari and finds the exact garment. Open source, CPU only.">
+<meta property="og:image" content="https://vivekkushalch.github.io/poshak/assets/brand/social-preview.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+@font-face {
+  font-family: "Sora";
+  src: url("assets/fonts/Sora-VF.ttf") format("truetype");
+  font-weight: 100 800;
+  font-display: swap;
+}
+:root {
+  --bg: #100f22; --bg2: #17153a; --card: #1b1940; --ink: #f2f0ff; --muted: #aaa8c9;
+  --line: #2f2c5c; --zari: #e8b84a; --zari-dim: #b8872a; --indigo: #2e2a7a;
+  --ok: #6fd7a0; --bad: #ff8f86; --lattice: rgba(232, 184, 74, .07);
+  --shadow: 0 24px 60px rgba(0, 0, 0, .45); --glow: 55%;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f7f5ef; --bg2: #efece2; --card: #ffffff; --ink: #1e1b4b; --muted: #5c5a78;
+    --line: #dddbea; --zari: #a8770f; --zari-dim: #8a6210; --indigo: #1e1b4b;
+    --ok: #1d6b45; --bad: #b3261e; --lattice: rgba(168, 119, 15, .09);
+    --shadow: 0 24px 60px rgba(30, 27, 75, .14); --glow: 7%;
+    color-scheme: light;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; color: var(--ink); background: var(--bg);
+  font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-image:
+    radial-gradient(1200px 600px at 80% -10%, color-mix(in srgb, var(--zari) 14%, transparent), transparent 60%),
+    radial-gradient(900px 500px at -10% 30%, color-mix(in srgb, var(--indigo) var(--glow), transparent), transparent 60%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><path d='M32 6 L58 32 L32 58 L6 32 Z' fill='none' stroke='%23e8b84a' stroke-opacity='.10' stroke-width='1.2'/><circle cx='32' cy='32' r='2' fill='%23e8b84a' fill-opacity='.14'/></svg>");
+  background-attachment: fixed;
+  background-position: 0 0, 0 0, 0 var(--drift, 0px);
+}
+h1, h2, h3, .brand b { font-family: "Sora", system-ui, sans-serif; letter-spacing: -.025em; line-height: 1.1; margin: 0; }
+a { color: inherit; }
+code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+:focus-visible { outline: 2px solid var(--zari); outline-offset: 3px; border-radius: 6px; }
+.wrap { width: min(1120px, 100% - 40px); margin-inline: auto; }
+main { overflow-x: clip; } /* slide-in animations start off to the side; never widen the page */
+.gold { color: var(--zari); }
+.muted { color: var(--muted); }
+
+/* nav */
+.nav { position: sticky; top: 0; z-index: 30; backdrop-filter: blur(14px);
+  background: color-mix(in srgb, var(--bg) 78%, transparent); border-bottom: 1px solid var(--line); }
+.nav .wrap { display: flex; align-items: center; gap: 22px; height: 64px; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; margin-right: auto; }
+.brand b { font-size: 22px; font-weight: 700; }
+.nav a.l { text-decoration: none; color: var(--muted); font-size: 15px; }
+.nav a.l:hover { color: var(--ink); }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px; font-weight: 600;
+  text-decoration: none; border: 1px solid var(--line); cursor: pointer; font-size: 15px; font-family: inherit;
+  background: transparent; color: var(--ink); transition: transform .15s, background .15s, border-color .15s; }
+.btn:hover { transform: translateY(-1px); border-color: var(--zari); }
+.btn.gold { background: var(--zari); color: #1a1530; border-color: var(--zari); }
+.btn.gold:hover { background: color-mix(in srgb, var(--zari) 88%, white); }
+.btn.sm { padding: 8px 14px; font-size: 14px; }
+
+/* sections */
+section { padding: 96px 0 24px; }
+.eyebrow { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--zari); font-weight: 600; margin-bottom: 14px; }
+section > .wrap > h2 { font-size: clamp(30px, 4.4vw, 48px); max-width: 18ch; }
+.lede { color: var(--muted); max-width: 60ch; margin: 18px 0 0; font-size: 18px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); }
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s ease; }
+.reveal.in { opacity: 1; transform: none; }
+
+/* scroll animation */
+.progress-bar { position: fixed; top: 0; left: 0; height: 3px; width: 100%; transform-origin: 0 50%; transform: scaleX(var(--scroll, 0));
+  background: linear-gradient(90deg, var(--zari-dim), var(--zari)); z-index: 60; pointer-events: none; }
+.reveal { transition-delay: var(--d, 0s); }
+.rv-left { transform: translateX(-46px); }
+.rv-right { transform: translateX(46px); }
+.rv-zoom { transform: scale(.93); }
+.reveal.in { opacity: 1; transform: none; }
+.eyebrow::before { content: ""; display: inline-block; width: 0; height: 2px; background: var(--zari); vertical-align: middle; margin-right: 0;
+  transition: width .8s cubic-bezier(.2, .8, .2, 1), margin .8s; }
+.eyebrow.in::before { width: 30px; margin-right: 12px; }
+section > .wrap > h2::after { content: ""; display: block; height: 3px; width: 0; margin-top: 16px; border-radius: 3px; background: var(--zari);
+  transition: width 1s .3s cubic-bezier(.2, .8, .2, 1); }
+section > .wrap > h2.in::after { width: 76px; }
+
+/* how it works cards */
+.cards3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 36px; }
+.how { padding: 24px; }
+.how .num { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--zari); color: #1a1530;
+  font: 700 16px "Sora", sans-serif; margin-bottom: 14px; }
+.how h3 { font-size: 19px; margin-bottom: 8px; }
+.how p { margin: 0; color: var(--muted); font-size: 15px; }
+
+/* architecture */
+.arch { margin-top: 38px; padding: 22px; }
+.arch .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.arch .tabs button { font: 600 14px inherit; font-family: inherit; padding: 9px 16px; border-radius: 999px; background: transparent; color: var(--muted);
+  border: 1px solid var(--line); cursor: pointer; transition: all .2s; }
+.arch .tabs button:hover { border-color: var(--zari); color: var(--ink); }
+.arch .tabs button[aria-selected="true"] { background: var(--zari); color: #1a1530; border-color: var(--zari); }
+.arch picture { display: none; }
+.arch picture.on { display: block; animation: archIn .5s ease; }
+.arch img { width: 100%; height: auto; display: block; }
+.arch-cap { margin: 14px 4px 0; color: var(--muted); font-size: 15px; }
+@keyframes archIn { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
+
+/* hero */
+.hero { padding-top: 56px; }
+.hero h1 { font-size: clamp(40px, 7vw, 84px); max-width: 15ch; font-weight: 700; }
+.hero .lede { font-size: 19px; }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+.stats { display: flex; flex-wrap: wrap; gap: 14px 34px; margin-top: 34px; color: var(--muted); font-size: 15px; }
+.stats b { display: block; font: 700 26px "Sora", sans-serif; color: var(--ink); letter-spacing: -.02em; }
+.stage { margin-top: 44px; padding: 18px; position: relative; overflow: hidden; }
+.stage canvas { display: block; width: 100%; height: 470px; }
+.tag { position: absolute; font: 600 13px "Sora", sans-serif; padding: 5px 11px; border-radius: 999px;
+  background: color-mix(in srgb, var(--bg) 70%, transparent); border: 1px solid var(--line); pointer-events: none; }
+.tag.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, var(--line)); }
+.tag.bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, var(--line)); }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; padding: 6px 4px 0; }
+.controls label { font-weight: 600; font-size: 15px; }
+.controls input[type=range] { flex: 1 1 260px; accent-color: var(--zari); height: 28px; }
+.controls small { color: var(--muted); }
+.note { color: var(--muted); font-size: 14px; margin: 12px 4px 0; }
+
+/* scan demo */
+.scan { position: relative; display: grid; grid-template-columns: 170px 1fr 300px; gap: 26px; padding: 26px; margin-top: 40px; align-items: start; }
+.scan-q { text-align: center; }
+.scan-q canvas { width: 150px; height: 150px; border-radius: 14px; border: 2px solid var(--zari); display: block; margin: 0 auto 8px; }
+.scan-q span, .badge-cap { font: 600 13px "Sora", sans-serif; color: var(--muted); }
+.scan-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 7px; }
+.tile { position: relative; aspect-ratio: 1; border-radius: 9px; overflow: hidden; opacity: .5; transition: opacity .35s, transform .35s, box-shadow .35s; }
+.tile canvas { width: 100%; height: 100%; display: block; }
+.tile i { position: absolute; left: 0; right: 0; bottom: 0; padding: 2px 0; font: 700 11px "Sora", sans-serif; font-style: normal;
+  text-align: center; color: #1a1530; background: var(--zari); transform: translateY(100%); transition: transform .3s; }
+.tile.scanned { opacity: .95; }
+.tile.short { opacity: 1; box-shadow: 0 0 0 2px var(--zari); transform: scale(1.04); z-index: 2; }
+.tile.short i { transform: none; }
+.tile.win { box-shadow: 0 0 0 3px var(--ok), 0 0 28px color-mix(in srgb, var(--ok) 55%, transparent); }
+.tile.win i { background: var(--ok); }
+.tile.out { opacity: .22; box-shadow: none; transform: none; }
+.scan-threads { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; overflow: visible; }
+.thr { fill: none; stroke: var(--zari); stroke-width: 1.4; opacity: .75; stroke-linecap: round; }
+.thr.strong { stroke-width: 2.4; opacity: 1; }
+.thr.win { stroke: var(--ok); }
+.steps { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px; }
+.steps li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; color: var(--muted); font-size: 15px; line-height: 1.4; transition: color .3s; }
+.steps li::before { content: attr(data-n); width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--line);
+  display: grid; place-items: center; font: 700 13px "Sora", sans-serif; transition: all .3s; }
+.steps li.on { color: var(--ink); }
+.steps li.on::before { border-color: var(--zari); color: var(--zari); }
+.steps li.done::before { content: "\2713"; background: var(--zari); border-color: var(--zari); color: #1a1530; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.chip { font-size: 13px; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.chip b { color: var(--ink); }
+.chip.skip { border-color: color-mix(in srgb, var(--ok) 55%, var(--line)); color: var(--ok); }
+.chip.run { border-color: color-mix(in srgb, var(--zari) 60%, var(--line)); color: var(--zari); }
+.verdict { min-height: 76px; padding: 12px 14px; border-radius: 12px; border: 1px dashed var(--line); font-size: 15px; line-height: 1.45; }
+.verdict.ok { border: 1px solid var(--ok); background: color-mix(in srgb, var(--ok) 10%, transparent); }
+.verdict.warn { border: 1px solid var(--zari); background: color-mix(in srgb, var(--zari) 10%, transparent); }
+.seg-toggle { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.seg-toggle button { font: 600 14px inherit; font-family: inherit; padding: 8px 14px; border-radius: 999px; background: transparent; color: var(--muted);
+  border: 1px solid var(--line); cursor: pointer; }
+.seg-toggle button.on { color: #1a1530; background: var(--zari); border-color: var(--zari); }
+
+/* evidence */
+.bars { margin-top: 40px; padding: 28px; display: grid; gap: 22px; }
+.bar-row { display: grid; grid-template-columns: 150px 1fr; gap: 18px; align-items: center; }
+.bar-label { font-weight: 600; font-size: 15px; }
+.bar-pair { display: grid; gap: 8px; }
+.bar { position: relative; height: 38px; border-radius: 10px; background: color-mix(in srgb, var(--line) 55%, transparent); overflow: hidden; }
+.bar i { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 10px; transition: width 1.4s cubic-bezier(.2, .8, .2, 1); }
+.bar.emb i { background: color-mix(in srgb, var(--bad) 75%, var(--bg)); }
+.bar.pos i { background: linear-gradient(90deg, var(--zari-dim), var(--zari)); }
+.bar span { position: relative; display: flex; align-items: center; height: 100%; padding: 0 14px; font-size: 14px; font-weight: 600; white-space: pre; }
+.bar span small { font-weight: 500; opacity: .85; margin-left: 12px; }
+.bar.pos span { color: #1a1530; }
+.bar.emb span { color: var(--ink); }
+.figure { margin: 34px 0 0; padding: 14px; }
+.figure img { width: 100%; height: auto; display: block; border-radius: 12px; background: #fff; }
+.figure figcaption { padding: 14px 6px 4px; color: var(--muted); font-size: 15px; }
+.two { display: grid; grid-template-columns: 1.15fr 1fr; gap: 26px; margin-top: 26px; align-items: center; }
+.points { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; color: var(--muted); font-size: 16px; }
+.points li { padding-left: 22px; position: relative; }
+.points li::before { content: ""; position: absolute; left: 0; top: .6em; width: 9px; height: 9px; transform: rotate(45deg); background: var(--zari); }
+.points b { color: var(--ink); }
+
+/* speed race */
+.race { margin-top: 40px; padding: 28px; }
+.lane { display: grid; grid-template-columns: 120px 1fr 86px; gap: 16px; align-items: center; margin-bottom: 12px; }
+.lane h3 { font-size: 17px; }
+.lane h3 small { display: block; font: 500 13px system-ui; color: var(--muted); letter-spacing: 0; }
+.track { position: relative; height: 46px; border-radius: 12px; background: color-mix(in srgb, var(--line) 50%, transparent); overflow: hidden; }
+.segs { position: absolute; inset: 0; clip-path: inset(0 calc((1 - var(--p, 0)) * 100%) 0 0); }
+.seg { position: absolute; top: 0; bottom: 0; }
+.clock { font: 700 22px "Sora", sans-serif; text-align: right; font-variant-numeric: tabular-nums; }
+.clock.done { color: var(--ok); }
+.legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 6px 22px; margin: 18px 0 0; padding: 0; list-style: none; font-size: 14px; color: var(--muted); }
+.legend li { display: flex; gap: 9px; align-items: center; }
+.legend i { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.race-foot { display: flex; justify-content: space-between; gap: 16px; align-items: center; flex-wrap: wrap; margin-top: 20px; }
+
+/* tables */
+.tables { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; margin-top: 40px; }
+.tbl { padding: 24px; }
+.tbl h3 { font-size: 19px; margin-bottom: 4px; }
+.tbl p { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { text-align: left; padding: 10px 6px; border-bottom: 1px solid var(--line); }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+td.win { color: var(--zari); font-weight: 700; }
+tr:last-child td { border-bottom: 0; }
+
+/* start */
+.code { position: relative; margin-top: 16px; padding: 18px 20px; overflow-x: auto; font-size: 14.5px; line-height: 1.7; border-radius: 14px;
+  background: color-mix(in srgb, var(--bg) 70%, #000); border: 1px solid var(--line); }
+.code pre { margin: 0; }
+.code .copy { position: absolute; top: 10px; right: 10px; }
+.code .c { color: var(--muted); }
+.code .k { color: var(--zari); }
+.start-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; margin-top: 36px; }
+.start-grid h3 { font-size: 19px; margin-bottom: 4px; }
+
+footer { margin-top: 110px; border-top: 1px solid var(--line); padding: 40px 0 60px; color: var(--muted); font-size: 14px; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 20px 40px; justify-content: space-between; align-items: center; }
+footer a { color: var(--ink); }
+
+@media (max-width: 900px) {
+  .cards3 { grid-template-columns: 1fr; }
+  .scan { grid-template-columns: 1fr; }
+  .scan-q canvas { margin: 0 0 8px; }
+  .scan-q { text-align: left; }
+  .two, .tables, .start-grid { grid-template-columns: 1fr; }
+  .bar-row, .lane { grid-template-columns: 1fr; gap: 8px; }
+  .clock { text-align: left; }
+  .nav a.l { display: none; }
+  .stage canvas { height: 400px; }
+}
+@media (max-width: 560px) {
+  body { font-size: 16px; }
+  section { padding-top: 72px; }
+  .scan-grid { grid-template-columns: repeat(6, 1fr); }
+  .tile:nth-child(n+37) { display: none; }
+  .stage { padding: 10px; }
+  .stage canvas { height: 360px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .bar i, .tile, .tile i, .eyebrow::before, section > .wrap > h2::after { transition: none; }
+  .progress-bar { display: none; }
+  .arch picture.on { animation: none; }
+}
+</style>
+</head>
+<body>
+<div class="progress-bar" aria-hidden="true"></div>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="poshak home">
+      <svg width="30" height="30" viewBox="0 0 100 100" aria-hidden="true">
+        <path d="M50 3 L97 50 L50 97 L3 50 Z" fill="var(--indigo)" stroke="var(--indigo)" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M50 17 L83 50 L50 83 L17 50 Z" fill="none" stroke="var(--zari)" stroke-width="3.2" stroke-linejoin="round"/>
+        <g fill="var(--zari)"><circle cx="50" cy="32" r="5"/><circle cx="68" cy="50" r="5"/><circle cx="50" cy="68" r="5"/><circle cx="32" cy="50" r="5"/><circle cx="50" cy="50" r="7"/></g>
+      </svg>
+      <b>poshak</b>
+    </a>
+    <a class="l" href="#how">How it works</a>
+    <a class="l" href="#architecture">Architecture</a>
+    <a class="l" href="#evidence">Results</a>
+    <a class="l" href="#speed">Speed</a>
+    <a class="l" href="#start">Quickstart</a>
+    <a class="btn sm" href="https://github.com/vivekkushalch/poshak">GitHub</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <div class="eyebrow">Visual search for Indian wear</div>
+      <h1>Embeddings find lookalikes. <span class="gold">poshak finds the exact piece.</span></h1>
+      <p class="lede">A hundred sherwanis share one cut and one colour. They differ in the zari, the butis, the border. poshak matches those details, so a phone photo finds the right SKU. Open source, and it runs on a 2&nbsp;GB CPU box.</p>
+      <div class="cta">
+        <a class="btn gold" href="#evidence">See real results</a>
+        <a class="btn" href="https://github.com/vivekkushalch/poshak">View the code</a>
+      </div>
+      <div class="stats" data-stagger>
+        <div><b>94% vs 64%</b>right photo ranked first, 190 re-shots</div>
+        <div><b>0.7 s</b>cloth search on a laptop CPU</div>
+        <div><b>MIT</b>no GPU, no per-query fees</div>
+      </div>
+
+      <div class="card stage reveal" id="stage">
+        <canvas id="hero" role="img" aria-label="Illustration: threads connect matching keypoints between a query photo and the exact catalog photo, but almost none to a lookalike."></canvas>
+        <span class="tag" style="left:34px; top:26px">Your photo</span>
+        <span class="tag ok" id="tagExact" style="right:30px; top:26px">Exact piece · <span id="cntExact">0</span> threads</span>
+        <span class="tag bad" id="tagLook" style="right:30px; top:50%; margin-top:8px">Lookalike · <span id="cntLook">0</span> threads</span>
+        <div class="controls">
+          <label for="sev">Make the photo worse</label>
+          <input id="sev" type="range" min="0" max="100" value="30" aria-describedby="sevNote">
+          <small>clean &nbsp;→&nbsp; cropped, tilted, dark</small>
+        </div>
+        <p class="note" id="sevNote">Illustration, not data. Each thread is one matching keypoint. The exact piece keeps most of its threads as the photo degrades; the lookalike never shared more than a few.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="wrap">
+      <div class="eyebrow">How it works</div>
+      <h2 class="reveal">Look at everything cheaply. Check the few that matter.</h2>
+      <p class="lede reveal">poshak scans every photo in the catalog with a quick keypoint match, fully checks a shortlist, and stops the moment one SKU is clearly ahead. For most queries the heavy image model never runs.</p>
+
+      <div class="cards3" data-stagger>
+        <div class="card how"><span class="num">1</span><h3>Scan everything, cheaply</h3><p>Match the strongest 300 keypoints of your photo against every photo in the catalog. No embedding model needed yet.</p></div>
+        <div class="card how"><span class="num">2</span><h3>Check the few that matter</h3><p>Fully match a shortlist. A match counts only if the two keypoints pick each other, which ignores the repeating patterns that fool a simple count.</p></div>
+        <div class="card how"><span class="num">3</span><h3>Stop when it is clear</h3><p>One SKU far ahead? Done. If not, run the embedding model once, widen the shortlist and blend both signals.</p></div>
+      </div>
+
+      <div class="card scan reveal" id="scan">
+        <div class="scan-q"><canvas id="scanQ" width="160" height="160" role="img" aria-label="The query photo"></canvas><span>Query</span></div>
+        <div class="scan-grid" id="scanGrid" aria-label="Forty catalog photos"></div>
+        <svg class="scan-threads" id="scanThreads" aria-hidden="true"></svg>
+        <div class="scan-side">
+          <ol class="steps" id="steps">
+            <li data-n="1">Scan every photo with the strongest 300 keypoints. No embedding yet.</li>
+            <li data-n="2">Fully match the best five.</li>
+            <li data-n="3">One SKU clearly ahead? Stop. If not, compute the embedding, widen the shortlist and blend the two signals.</li>
+          </ol>
+          <div class="chips">
+            <span class="chip" id="chipEmb">Embedding model: <b>waiting</b></span>
+            <span class="chip" id="chipBg">Background removal: <b>not used</b></span>
+          </div>
+          <div class="verdict" id="verdict">Press replay to watch a search.</div>
+          <div class="seg-toggle" role="group" aria-label="Choose a query">
+            <button type="button" data-mode="easy" class="on">Easy photo</button>
+            <button type="button" data-mode="hard">Hard photo</button>
+            <button type="button" id="replay">Replay</button>
+          </div>
+        </div>
+      </div>
+      <p class="note reveal">Illustration of the algorithm described in <a href="https://github.com/vivekkushalch/poshak/blob/main/docs/adr/0006-progressive-ranking.md">ADR 0006</a>. The photos here are generated patterns; the counts are made up to show the logic. The real results are below.</p>
+    </div>
+  </section>
+
+  <section id="evidence">
+    <div class="wrap">
+      <div class="eyebrow">Real results</div>
+      <h2 class="reveal">Not a mock-up. Check the photos yourself.</h2>
+      <p class="lede reveal">95 photographs of Indian textiles and garments from Wikimedia Commons, many of them near-identical lookalikes. 190 searches, each with a re-shot of a gallery photo: cropped, tilted, darkened, blurred and re-compressed.</p>
+
+      <div class="card bars reveal" id="bars">
+        <div class="bar-row"><div class="bar-label">All 190 re-shots<br><span class="muted" style="font-weight:500">right photo ranked first</span></div>
+          <div class="bar-pair">
+            <div class="bar emb"><i data-p="63.7"></i><span><b data-count="121">0</b> / 190 <small>embedding only</small></span></div>
+            <div class="bar pos"><i data-p="93.7"></i><span><b data-count="178">0</b> / 190 <small>poshak</small></span></div>
+          </div></div>
+        <div class="bar-row"><div class="bar-label">Mild re-shots</div>
+          <div class="bar-pair">
+            <div class="bar emb"><i data-p="76.8"></i><span><b data-count="73">0</b> / 95 <small>embedding only</small></span></div>
+            <div class="bar pos"><i data-p="97.9"></i><span><b data-count="93">0</b> / 95 <small>poshak</small></span></div>
+          </div></div>
+        <div class="bar-row"><div class="bar-label">Heavy re-shots</div>
+          <div class="bar-pair">
+            <div class="bar emb"><i data-p="50.5"></i><span><b data-count="48">0</b> / 95 <small>embedding only</small></span></div>
+            <div class="bar pos"><i data-p="89.5"></i><span><b data-count="85">0</b> / 95 <small>poshak</small></span></div>
+          </div></div>
+      </div>
+
+      <figure class="card figure reveal">
+        <a href="assets/demo/search-demo.jpg"><img src="assets/demo/search-demo.jpg" alt="Three searches. For each re-shot query, an embedding-only search returns lookalikes in red; poshak returns the exact photo in green with 169, 336 and 309 matching keypoints against 1 to 8 for the others." loading="lazy" width="1776" height="1170"></a>
+        <figcaption>Three real searches. Left: the query. Middle: what an embedding-only search returns (red: a different photo). Right: what poshak returns (green: the right photo, with its match count). Click to open full size.</figcaption>
+      </figure>
+
+      <div class="two">
+        <figure class="card figure reveal rv-left" style="margin:0">
+          <a href="assets/demo/match-lines.jpg"><img src="assets/demo/match-lines.jpg" alt="Matching keypoints: many lines join the query to the right photo, one line to the lookalike an embedding ranks first." loading="lazy" width="1100" height="910"></a>
+        </figure>
+        <ul class="points" data-stagger>
+          <li><b>Why the exact photo wins.</b> It shares 169 keypoints with the query. The lookalike an embedding prefers shares 4.</li>
+          <li><b>What the demo is.</b> A query is a re-shot of a gallery photo, not a second photograph of the same object. That is easier than real life, so see the harder case below.</li>
+          <li><b>No peeking.</b> poshak's settings were fixed on a different, private catalog before this gallery existed. Nothing was tuned on these photos.</li>
+          <li><b>Check it.</b> <a href="https://github.com/vivekkushalch/poshak/blob/main/docs/demo/build_demo.py">docs/demo/build_demo.py</a> downloads the photos and rebuilds both figures. <a href="https://github.com/vivekkushalch/poshak/blob/main/docs/demo/ATTRIBUTION.md">Photo credits</a>.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="architecture">
+    <div class="wrap">
+      <div class="eyebrow">Architecture</div>
+      <h2 class="reveal">Small on purpose. Every part swappable.</h2>
+      <p class="lede reveal">One container, one SQLite file, no GPU. A pure ranking engine sits in the middle. Storage, the embedding model, background removal and the vector index plug in through ports, so a new backend is one class and one line of wiring.</p>
+      <div class="card arch reveal rv-zoom" id="arch">
+        <div class="tabs" role="tablist" aria-label="Architecture diagrams">
+          <button type="button" role="tab" aria-selected="true" data-arch="context">System context</button>
+          <button type="button" role="tab" aria-selected="false" data-arch="containers">Containers</button>
+          <button type="button" role="tab" aria-selected="false" data-arch="components">Components</button>
+        </div>
+        <picture class="on" data-arch-pic="context"><source media="(prefers-color-scheme: dark)" srcset="assets/arch/context-dark.svg"><img src="assets/arch/context-light.svg" width="980" height="600" alt="System context: shoppers and catalog staff use a storefront and the admin page; poshak depends on object storage, an optional background-removal API and model weights."></picture>
+        <picture class="" data-arch-pic="containers"><source media="(prefers-color-scheme: dark)" srcset="assets/arch/containers-dark.svg"><img src="assets/arch/containers-light.svg" width="980" height="660" alt="Containers: one deployment with an HTTP API, an ingest worker, a verification pool, the model runtime, SQLite and a blob store."></picture>
+        <picture class="" data-arch-pic="components"><source media="(prefers-color-scheme: dark)" srcset="assets/arch/components-dark.svg"><img src="assets/arch/components-light.svg" width="980" height="560" alt="Components: driving adapters call services, services use a pure engine and domain ports, driven adapters implement the ports."></picture>
+        <p class="arch-cap" id="archCap" aria-live="polite"></p>
+      </div>
+      <ul class="points" data-stagger style="margin-top:28px">
+        <li><b>A pure engine.</b> Ranking does no I/O, so it is easy to test. A golden test pins the rankings, so a refactor can never change a result unnoticed.</li>
+        <li><b>Ports and adapters.</b> Local disk or S3, SigLIP, U2Net or a remote remover, SQLite and an exact vector index all sit behind small interfaces. A test enforces the layer rules.</li>
+        <li><b>One process on purpose.</b> The index lives in RAM, so you scale with more containers, not more workers. It is sized for a 2&nbsp;GB machine.</li>
+        <li><b>Read the design.</b> Sequence diagrams, the data model, failure modes and the scaling path are in the <a href="https://github.com/vivekkushalch/poshak/blob/main/docs/architecture.md">architecture document</a>.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="speed">
+    <div class="wrap">
+      <div class="eyebrow">Speed</div>
+      <h2 class="reveal">From 5.4 seconds to 0.7. In real time.</h2>
+      <p class="lede reveal">Both searches run on the same laptop CPU: an Intel i5-7200U, two cores, no GPU. Press the button and watch them actually take that long.</p>
+
+      <div class="card race reveal" id="race">
+        <div class="lane"><h3>Before<small>two passes, cutout, 80 matches</small></h3>
+          <div class="track"><div class="segs" id="segsLegacy"></div></div><div class="clock" id="clkLegacy">0.0 s</div></div>
+        <div class="lane"><h3>poshak v2<small>scan, match 5, stop</small></h3>
+          <div class="track"><div class="segs" id="segsV2"></div></div><div class="clock" id="clkV2">0.0 s</div></div>
+        <ul class="legend" id="legend"></ul>
+        <div class="race-foot">
+          <button class="btn gold sm" id="raceBtn" type="button">Race again</button>
+          <span class="note" style="margin:0">Before: stage medians measured with the real models. v2: measured end to end; the split inside it is approximate.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="numbers">
+    <div class="wrap">
+      <div class="eyebrow">The numbers</div>
+      <h2 class="reveal">All of them, caveats included.</h2>
+      <p class="lede reveal">Recall@1: how often the right SKU is ranked first. Every figure is on held-out test queries that were never used to choose a setting.</p>
+      <div class="tables" data-stagger>
+        <div class="card tbl reveal">
+          <h3>A real shop catalog</h3>
+          <p>408 SKUs, 12-megapixel phone photos. One shop, mostly sherwanis.</p>
+          <table>
+            <tr><th>Query</th><th class="n">n</th><th class="n">Before</th><th class="n">v2</th></tr>
+            <tr><td>Cloth, mild re-shot</td><td class="n">100</td><td class="n">96%</td><td class="n win">98%</td></tr>
+            <tr><td>Cloth, heavy re-shot</td><td class="n">100</td><td class="n">89%</td><td class="n win">93%</td></tr>
+            <tr><td>Fabric, both levels</td><td class="n">50</td><td class="n">92%</td><td class="n win">96%</td></tr>
+            <tr><td>A different photo of the same SKU</td><td class="n">99</td><td class="n">30%</td><td class="n win">37%</td></tr>
+          </table>
+        </div>
+        <div class="card tbl reveal">
+          <h3>DeepFashion In-shop sample</h3>
+          <p>Public research dataset, 224 px studio photos. Metrics only; no images are redistributed.</p>
+          <table>
+            <tr><th>Query</th><th class="n">n</th><th class="n">Before</th><th class="n">v2</th></tr>
+            <tr><td>Mild re-shot</td><td class="n">37</td><td class="n">95%</td><td class="n win">100%</td></tr>
+            <tr><td>Heavy re-shot</td><td class="n">37</td><td class="n">38%</td><td class="n win">65%</td></tr>
+            <tr><td>A different view of the same item</td><td class="n">73</td><td class="n">52%</td><td class="n win">78%</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="start">
+    <div class="wrap">
+      <div class="eyebrow">Quickstart</div>
+      <h2 class="reveal">Running in a minute.</h2>
+      <div class="start-grid" data-stagger>
+        <div class="reveal">
+          <h3>1. Start it</h3>
+          <div class="code"><button class="btn sm copy" type="button" data-copy="git clone https://github.com/vivekkushalch/poshak &amp;&amp; cd poshak&#10;docker compose up -d --build&#10;curl localhost:8088/health">Copy</button><pre><span class="k">git clone</span> https://github.com/vivekkushalch/poshak &amp;&amp; <span class="k">cd</span> poshak
+<span class="k">docker compose</span> up -d --build
+<span class="k">curl</span> localhost:8088/health</pre></div>
+        </div>
+        <div class="reveal">
+          <h3>2. Index a photo, then search</h3>
+          <div class="code"><button class="btn sm copy" type="button" data-copy="curl -F image=@swatch.jpg -F photo_name=zari_42.jpg -F sku_id=42 -F item=Fabric localhost:8088/ingest&#10;curl -F image=@query.jpg -F category=fabric -F top_k=3 localhost:8088/search">Copy</button><pre><span class="k">curl</span> -F image=@swatch.jpg -F photo_name=zari_42.jpg \
+     -F sku_id=42 -F item=Fabric localhost:8088/ingest
+<span class="k">curl</span> -F image=@query.jpg -F category=fabric \
+     -F top_k=3 localhost:8088/search</pre></div>
+        </div>
+        <div class="reveal">
+          <h3>3. Under a thousand photos? Turn on the fast ranker</h3>
+          <div class="code"><button class="btn sm copy" type="button" data-copy="docker compose -f compose.prod.yaml exec poshak poshak refresh-descriptors">Copy</button><pre><span class="c"># set RANKER=v2 in .env, restart, then once:</span>
+<span class="k">docker compose</span> -f compose.prod.yaml exec \
+     poshak poshak refresh-descriptors</pre></div>
+        </div>
+        <div class="reveal">
+          <h3>Then open</h3>
+          <div class="code"><pre><span class="k">/ui</span>      search by photo from a phone
+<span class="k">/admin</span>   upload, watch indexing, fix cutouts
+<span class="k">/docs</span>    the API, with schemas</pre></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div><b>poshak</b> · MIT licensed · CPU only · built on SigLIP, OpenCV SIFT and FastAPI</div>
+    <div>
+      <a href="https://github.com/vivekkushalch/poshak">GitHub</a> ·
+      <a href="https://github.com/vivekkushalch/poshak/blob/main/docs/architecture.md">Architecture</a> ·
+      <a href="https://github.com/vivekkushalch/poshak/blob/main/docs/demo/ATTRIBUTION.md">Photo credits</a> ·
+      Wordmark in Sora (SIL OFL)
+    </div>
+  </div>
+</footer>
+
+<script>
+(() => {
+"use strict";
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const rng = (seed) => { let s = seed >>> 0; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; };
+const sleep = (ms) => new Promise((r) => setTimeout(r, reduced ? 0 : ms));
+const theme = {};
+const readTheme = () => {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ["zari", "ink", "card", "line", "muted"]) theme[k] = cs.getPropertyValue("--" + k).trim();
+};
+readTheme();
+matchMedia("(prefers-color-scheme: light)").addEventListener("change", readTheme);
+
+/* ---------- reveal on scroll ---------- */
+const io = new IntersectionObserver((entries) => {
+  for (const e of entries) if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); e.target.dispatchEvent(new Event("revealed")); }
+}, { threshold: 0.05 });
+$$("[data-stagger]").forEach((g) => [...g.children].forEach((c, i) => { c.classList.add("reveal"); c.style.setProperty("--d", i * 90 + "ms"); }));
+$$(".eyebrow").forEach((e) => e.classList.add("reveal"));
+$$(".tables > .tbl:first-child, .start-grid > div:nth-child(odd)").forEach((e) => e.classList.add("rv-left"));
+$$(".tables > .tbl:last-child, .start-grid > div:nth-child(even)").forEach((e) => e.classList.add("rv-right"));
+$$(".reveal").forEach((el) => io.observe(el));
+if (!reduced) {
+  const root = document.documentElement;
+  const onScroll = () => {
+    const max = root.scrollHeight - innerHeight || 1;
+    root.style.setProperty("--scroll", Math.min(scrollY / max, 1).toFixed(4));
+    root.style.setProperty("--drift", (scrollY * -.06).toFixed(1) + "px");
+  };
+  addEventListener("scroll", onScroll, { passive: true }); onScroll();
+}
+
+/* ---------- textile swatches (generated patterns) ---------- */
+const PALETTES = [["#7a1f3d", "#e8b84a"], ["#1d3a6e", "#f0d98a"], ["#0f6b57", "#f2c14e"], ["#c4571a", "#fbe3b0"],
+                  ["#4b2a7a", "#e8b84a"], ["#8a1c1c", "#f5d28a"], ["#2b2b36", "#e8b84a"], ["#e9dcc3", "#a8770f"]];
+const swatchSpec = (seed) => { const h = Math.imul(seed + 1, 2654435761) >>> 0; return { pal: h % 8, kind: (h >>> 8) % 4, step: (h >>> 16) % 3 }; };
+function drawSwatch(ctx, size, seed, spec = swatchSpec(seed)) {
+  const r = rng(seed * 977 + 13), [base, gold] = PALETTES[spec.pal], k = size / 72;
+  ctx.fillStyle = base; ctx.fillRect(0, 0, size, size);
+  ctx.globalAlpha = .16; ctx.strokeStyle = "#000"; ctx.lineWidth = Math.max(1, k * .8);
+  for (let i = -size; i < size * 2; i += 4 * k) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + size, size); ctx.stroke(); }
+  ctx.globalAlpha = 1; ctx.strokeStyle = gold; ctx.fillStyle = gold; ctx.lineWidth = Math.max(1, 1.2 * k);
+  const kind = spec.kind, step = (13 + spec.step * 4 + r() * 2) * k;
+  for (let y = step / 2, row = 0; y < size + step; y += step, row++) {
+    for (let x = (row % 2) * step / 2; x < size + step; x += step) {
+      const px = x + (r() - .5) * k, py = y + (r() - .5) * k, s = step * .34;
+      if (kind === 0) { ctx.beginPath(); ctx.moveTo(px, py - s); ctx.lineTo(px + s, py); ctx.lineTo(px, py + s); ctx.lineTo(px - s, py); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.arc(px, py, s * .22, 0, 7); ctx.fill(); }
+      else if (kind === 1) { ctx.beginPath(); ctx.arc(px, py, s * .45, 0, 7); ctx.fill(); }
+      else if (kind === 2) { for (let a = 0; a < 6; a++) { ctx.beginPath(); ctx.ellipse(px + Math.cos(a * 1.047) * s * .55, py + Math.sin(a * 1.047) * s * .55, s * .3, s * .16, a * 1.047, 0, 7); ctx.stroke(); } ctx.beginPath(); ctx.arc(px, py, s * .2, 0, 7); ctx.fill(); }
+      else { ctx.beginPath(); ctx.moveTo(px - s, py + s * .6); ctx.quadraticCurveTo(px, py - s * 1.2, px + s * .9, py + s * .5); ctx.stroke(); ctx.beginPath(); ctx.arc(px + s * .9, py + s * .5, s * .16, 0, 7); ctx.fill(); }
+    }
+  }
+}
+
+/* ---------- hero: threads between matching keypoints ---------- */
+(() => {
+  const canvas = $("#hero"), ctx = canvas.getContext("2d"), sev = $("#sev");
+  const cntEx = $("#cntExact"), cntLk = $("#cntLook");
+  const R = rng(7), ROWS = 12, COLS = 11, base = [];
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++)
+    base.push({ u: (c + (r % 2 ? .5 : 0) + .35) / (COLS + .2), v: (r + .5) / ROWS, s: 3 + R() * 3, j: [R() - .5, R() - .5], thr: R() });
+  const look = base.map((p) => R() < .045 ? { ...p, same: true }
+    : { u: p.u + (R() - .5) * .08, v: p.v + (R() - .5) * .08, s: p.s * (.8 + R() * .5), same: false });
+  const speckle = Array.from({ length: 70 }, () => [R(), R(), R()]);
+  let W = 0, H = 0, dpr = 1, running = true, auto = true, sv = .3, t0 = performance.now(), last = {};
+
+  function size() {
+    const rect = canvas.getBoundingClientRect(); dpr = Math.min(devicePixelRatio || 1, 2);
+    W = rect.width; H = rect.height; canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  new ResizeObserver(() => { size(); draw(performance.now()); }).observe(canvas);
+
+  function layout() {
+    const pad = 18, S2 = Math.min(W * .4, (H - pad * 2 - 12) / 2), S1 = Math.min(W * .36, H - pad * 2 - 20);
+    return { q: { x: pad, y: (H - S1) / 2, s: S1 }, ex: { x: W - S2 - pad, y: pad, s: S2 }, lk: { x: W - S2 - pad, y: pad + S2 + 12, s: S2 } };
+  }
+  function query(v, t) {
+    const rot = v * .26 + Math.sin(t * .0007) * .012, sc = 1 + v * .38, sx = v * .05, sy = -v * .035, drop = .04 + .52 * v;
+    const cs = Math.cos(rot), sn = Math.sin(rot);
+    return base.map((p, i) => {
+      const x = p.u - .5 + p.j[0] * .012 * v, y = p.v - .5 + p.j[1] * .012 * v;
+      const X = (x * cs - y * sn) * sc + .5 + sx, Y = (x * sn + y * cs) * sc + .5 + sy;
+      return { X, Y, i, vis: X > .03 && X < .97 && Y > .03 && Y < .97 && p.thr > drop };
+    });
+  }
+  function motif(x, y, r) {
+    ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.closePath();
+    ctx.globalAlpha = .25; ctx.fillStyle = theme.zari; ctx.fill(); ctx.globalAlpha = 1; ctx.strokeStyle = theme.zari; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, r * .28, 0, 7); ctx.fillStyle = theme.zari; ctx.fill();
+  }
+  function panel(b, pts, tint, dark) {
+    ctx.save(); ctx.beginPath(); ctx.roundRect(b.x, b.y, b.s, b.s, 14); ctx.clip();
+    const g = ctx.createLinearGradient(b.x, b.y, b.x + b.s, b.y + b.s); g.addColorStop(0, tint[0]); g.addColorStop(1, tint[1]);
+    ctx.fillStyle = g; ctx.fillRect(b.x, b.y, b.s, b.s);
+    ctx.lineWidth = 1; ctx.strokeStyle = "rgba(0,0,0,.16)";
+    for (let k = -b.s; k < b.s * 2; k += 5) { ctx.beginPath(); ctx.moveTo(b.x + k, b.y); ctx.lineTo(b.x + k + b.s, b.y + b.s); ctx.stroke(); }
+    ctx.strokeStyle = "rgba(255,255,255,.05)";
+    for (let k = -b.s; k < b.s * 2; k += 5) { ctx.beginPath(); ctx.moveTo(b.x + k, b.y + b.s); ctx.lineTo(b.x + k + b.s, b.y); ctx.stroke(); }
+    for (const p of pts) if (p.vis !== false) motif(b.x + p.X * b.s, b.y + p.Y * b.s, p.s * (b.s / 230) + 2);
+    if (dark > 0) {
+      ctx.fillStyle = `rgba(0,0,0,${dark * .4})`; ctx.fillRect(b.x, b.y, b.s, b.s);
+      ctx.fillStyle = "rgba(255,255,255,.5)";
+      for (const [a, c, d] of speckle) if (d < dark) ctx.fillRect(b.x + a * b.s, b.y + c * b.s, 1.4, 1.4);
+    }
+    ctx.restore(); ctx.lineWidth = 1.5; ctx.strokeStyle = theme.line; ctx.beginPath(); ctx.roundRect(b.x, b.y, b.s, b.s, 14); ctx.stroke();
+  }
+  function thread(x1, y1, x2, y2, f, a) {
+    const ex = x1 + (x2 - x1) * f, ey = y1 + (y2 - y1) * f, dx = ex - x1;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.bezierCurveTo(x1 + dx * .5, y1, ex - dx * .5, ey, ex, ey);
+    ctx.strokeStyle = theme.zari; ctx.globalAlpha = a * .12; ctx.lineWidth = 3.5; ctx.stroke();
+    ctx.globalAlpha = a; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  function draw(now) {
+    if (!W) return;
+    const t = now - t0, intro = reduced ? 1 : Math.min(t / 1700, 1), e = 1 - Math.pow(1 - intro, 3);
+    if (auto && !reduced) sv = .3 + .26 * Math.sin(t * .00045) ;
+    const L = layout(), Q = query(sv, t), pts = (a) => a.map((p) => ({ X: p.u, Y: p.v, s: p.s }));
+    ctx.clearRect(0, 0, W, H);
+    panel(L.q, Q.map((p) => ({ ...p, s: base[p.i].s })), ["#7a1f3d", "#5d1530"], sv);
+    panel(L.ex, pts(base), ["#7a1f3d", "#5d1530"], 0);
+    panel(L.lk, pts(look), ["#7e2442", "#5a1630"], 0);
+    let nEx = 0, nLk = 0;
+    for (const p of Q) {
+      if (!p.vis) continue;
+      const x1 = L.q.x + p.X * L.q.s, y1 = L.q.y + p.Y * L.q.s;
+      thread(x1, y1, L.ex.x + base[p.i].u * L.ex.s, L.ex.y + base[p.i].v * L.ex.s, e, .5); nEx++;
+      if (look[p.i].same) { thread(x1, y1, L.lk.x + look[p.i].u * L.lk.s, L.lk.y + look[p.i].v * L.lk.s, e, .9); nLk++; }
+    }
+    if (last.e !== nEx) { cntEx.textContent = nEx; last.e = nEx; }
+    if (last.l !== nLk) { cntLk.textContent = nLk; last.l = nLk; }
+  }
+  sev.addEventListener("input", () => { auto = false; sv = sev.value / 100; draw(performance.now()); });
+  function loop(now) { if (running && !reduced) draw(now); requestAnimationFrame(loop); }
+  new IntersectionObserver(([e]) => { running = e.isIntersecting; }).observe(canvas);
+  size(); draw(performance.now()); requestAnimationFrame(loop);
+})();
+
+/* ---------- scan demo ---------- */
+(() => {
+  const box = $("#scan"), grid = $("#scanGrid"), svg = $("#scanThreads"), qc = $("#scanQ"), verdict = $("#verdict");
+  const N = 40, EXACT = 21, LOOK = new Set([9, 30, 14, 3]), tiles = [], steps = $$("#steps li"), NS = "http://www.w3.org/2000/svg";
+  const exactSpec = swatchSpec(EXACT * 7 + 3);
+  for (let i = 0; i < N; i++) {
+    const d = document.createElement("div"), c = document.createElement("canvas"), b = document.createElement("i");
+    d.className = "tile"; c.width = c.height = 72; d.append(c, b); grid.append(d);
+    drawSwatch(c.getContext("2d"), 72, i * 7 + 3, i === EXACT ? exactSpec : LOOK.has(i) ? { ...exactSpec, step: (exactSpec.step + 1 + (i % 2)) % 3 } : undefined);
+    tiles.push({ d, b });
+  }
+  const g = qc.getContext("2d"), off = document.createElement("canvas"); off.width = off.height = 160;
+  drawSwatch(off.getContext("2d"), 160, EXACT * 7 + 3, exactSpec);
+  g.save(); g.translate(80, 80); g.rotate(.12); g.scale(1.25, 1.25); g.drawImage(off, -80, -80); g.restore();
+  g.fillStyle = "rgba(0,0,0,.3)"; g.fillRect(0, 0, 160, 160);
+
+  const modes = {
+    easy: { s1: [[EXACT, 169], [9, 5], [30, 3], [14, 2], [3, 1]], clear: true },
+    hard: { s1: [[9, 21], [EXACT, 19], [30, 6], [14, 4], [3, 3]], clear: false,
+            s2: [[5, 4], [12, 3], [27, 3], [33, 2], [36, 2], [38, 2], [2, 2], [16, 2], [25, 1], [39, 1]] },
+  };
+  let mode = "easy", run = 0;
+  const center = (el) => { const a = el.getBoundingClientRect(), b = box.getBoundingClientRect(); return [a.left - b.left + a.width / 2, a.top - b.top + a.height / 2]; };
+  function thread(i, cls) {
+    const [x1, y1] = center(qc), [x2, y2] = center(tiles[i].d), mx = (x1 + x2) / 2, p = document.createElementNS(NS, "path");
+    p.setAttribute("d", `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`); p.setAttribute("class", "thr " + cls); svg.append(p);
+    if (reduced) return;
+    const len = p.getTotalLength(); p.style.strokeDasharray = len; p.style.strokeDashoffset = len;
+    requestAnimationFrame(() => { p.style.transition = "stroke-dashoffset .7s ease"; p.style.strokeDashoffset = 0; });
+  }
+  const step = (n, st) => steps[n].className = st;
+  const chip = (id, cls, html) => { const c = $(id); c.className = "chip " + cls; c.innerHTML = html; };
+  function reset() {
+    svg.replaceChildren(); steps.forEach((s) => s.className = ""); verdict.className = "verdict"; verdict.textContent = "Scanning every photo in the catalog…";
+    tiles.forEach((t) => { t.d.className = "tile"; t.b.textContent = ""; });
+    chip("#chipEmb", "", "Embedding model: <b>waiting</b>"); chip("#chipBg", "skip", "Background removal: <b>not used</b>");
+  }
+  async function play() {
+    const id = ++run, M = modes[mode], live = () => id === run; reset(); step(0, "on");
+    for (let i = 0; i < N && live(); i++) { tiles[i].d.classList.add("scanned"); if (i % 4 === 3) await sleep(70); }
+    if (!live()) return; await sleep(250); step(0, "done"); step(1, "on");
+    tiles.forEach((t) => t.d.classList.remove("scanned"));
+    M.s1.forEach(([i, n]) => { tiles[i].d.classList.add("short"); tiles[i].b.textContent = n; thread(i, i === EXACT ? "strong" : ""); });
+    await sleep(1200); if (!live()) return; step(1, "done"); step(2, "on");
+    if (M.clear) {
+      tiles[EXACT].d.classList.add("win"); tiles.forEach((t, i) => { if (!t.d.classList.contains("win")) t.d.classList.add("out"); });
+      svg.querySelectorAll(".strong").forEach((p) => p.classList.add("win"));
+      chip("#chipEmb", "skip", "Embedding model: <b>never ran</b>");
+      verdict.className = "verdict ok"; verdict.innerHTML = "<b>169</b> matches, over 1.5&times; the runner-up (5). One SKU is clearly ahead, so <b>stop</b>. The image model never ran.";
+      step(2, "done"); return;
+    }
+    verdict.className = "verdict warn"; verdict.innerHTML = "<b>21</b> against <b>19</b>: too close to call. Compute the embedding, check 10 more photos, blend the two signals.";
+    chip("#chipEmb", "run", "Embedding model: <b>running once</b>"); await sleep(1300); if (!live()) return;
+    M.s2.forEach(([i, n]) => { tiles[i].d.classList.add("short"); tiles[i].b.textContent = n; });
+    await sleep(1300); if (!live()) return;
+    tiles[EXACT].d.classList.add("win"); tiles.forEach((t) => { if (!t.d.classList.contains("win")) t.d.classList.add("out"); });
+    svg.replaceChildren(); thread(EXACT, "strong win");
+    chip("#chipEmb", "skip", "Embedding model: <b>ran once</b>");
+    verdict.className = "verdict ok"; verdict.innerHTML = "Matches <b>and</b> similarity agree on one photo. The exact piece wins, even though another had more raw matches.";
+    step(2, "done");
+  }
+  $$(".seg-toggle button[data-mode]").forEach((b) => b.addEventListener("click", () => {
+    mode = b.dataset.mode; $$(".seg-toggle button[data-mode]").forEach((x) => x.classList.toggle("on", x === b)); play();
+  }));
+  $("#replay").addEventListener("click", play);
+  box.addEventListener("revealed", () => play());
+  addEventListener("resize", () => { /* threads are positioned in pixels */ if (svg.childElementCount) play(); });
+})();
+
+/* ---------- speed race ---------- */
+(() => {
+  const TOTAL = 5.4;
+  const legacy = [["Decode and resize", .03, "#8e8cc4"], ["Background removal", 2.76, "#c4571a"], ["SigLIP embedding, twice", .8, "#6b5fd0"],
+                  ["Keypoints, twice", .24, "#3f8f6f"], ["Recall, twice", .05, "#5d8fd0"], ["Verify 80 matches", .82, "#d0a13c"], ["Overhead", .7, "#55537a"]];
+  const v2 = [["Keypoints", .12, "#3f8f6f"], ["Scan the catalog", .22, "#e8b84a"], ["Match five photos", .15, "#d0a13c"], ["Overhead", .21, "#55537a"]];
+  function fill(el, list) { let x = 0; for (const [, s, c] of list) { const d = document.createElement("div"); d.className = "seg"; d.style.left = (x / TOTAL * 100) + "%"; d.style.width = (s / TOTAL * 100) + "%"; d.style.background = c; el.append(d); x += s; } }
+  fill($("#segsLegacy"), legacy); fill($("#segsV2"), v2);
+  const lg = $("#legend");
+  for (const [n, s, c] of [...legacy.slice(1, 3), ...legacy.slice(5, 6), ...v2.slice(1, 3)]) { const li = document.createElement("li"); li.innerHTML = `<i style="background:${c}"></i>${n}: ${s.toFixed(2)} s`; lg.append(li); }
+  const tracks = [[$("#segsLegacy"), $("#clkLegacy"), 5.4], [$("#segsV2"), $("#clkV2"), .7]];
+  let raf = 0;
+  function race() {
+    cancelAnimationFrame(raf); tracks.forEach(([, c]) => c.classList.remove("done"));
+    if (reduced) { tracks.forEach(([s, c, t]) => { s.style.setProperty("--p", 1); c.textContent = t.toFixed(1) + " s"; c.classList.add("done"); }); return; }
+    const t0 = performance.now();
+    (function frame(now) {
+      const e = (now - t0) / 1000;
+      for (const [s, c, t] of tracks) { s.style.setProperty("--p", Math.min(e / TOTAL, 1)); c.textContent = Math.min(e, t).toFixed(1) + " s"; c.classList.toggle("done", e >= t); }
+      if (e < TOTAL) raf = requestAnimationFrame(frame);
+    })(t0);
+  }
+  $("#raceBtn").addEventListener("click", race);
+  $("#race").addEventListener("revealed", race);
+})();
+
+/* ---------- bars ---------- */
+$("#bars").addEventListener("revealed", () => {
+  $$("#bars .bar i").forEach((i) => requestAnimationFrame(() => { i.style.width = i.dataset.p + "%"; }));
+  $$("#bars b[data-count]").forEach((b) => {
+    const to = +b.dataset.count; if (reduced) { b.textContent = to; return; }
+    const t0 = performance.now();
+    (function step(now) { const p = Math.min((now - t0) / 1400, 1); b.textContent = Math.round(to * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(step); })(t0);
+  });
+});
+
+/* ---------- architecture tabs ---------- */
+(() => {
+  const caps = {
+    context: "Who uses poshak and what it depends on. The storefront keeps products and users; poshak keeps the search index.",
+    containers: "One deployment: the HTTP API, an ingest worker, a verification pool, the model runtime, and SQLite plus a blob store.",
+    components: "Ports and adapters around a pure engine. container.py is the only place that names concrete classes.",
+  };
+  const tabs = $$("#arch [data-arch]"), pics = $$("#arch [data-arch-pic]"), cap = $("#archCap");
+  const show = (name) => {
+    tabs.forEach((t) => t.setAttribute("aria-selected", String(t.dataset.arch === name)));
+    pics.forEach((q) => q.classList.toggle("on", q.dataset.archPic === name));
+    cap.textContent = caps[name];
+  };
+  tabs.forEach((t) => t.addEventListener("click", () => show(t.dataset.arch)));
+  show("context");
+})();
+
+/* ---------- copy buttons ---------- */
+$$(".copy").forEach((b) => b.addEventListener("click", async () => {
+  const text = b.dataset.copy.replace(/&#10;/g, "\n");
+  try { await navigator.clipboard.writeText(text); } catch { const t = document.createElement("textarea"); t.value = text; document.body.append(t); t.select(); document.execCommand("copy"); t.remove(); }
+  const old = b.textContent; b.textContent = "Copied"; setTimeout(() => (b.textContent = old), 1400);
+}));
+})();
+</script>
+</body>
+</html>

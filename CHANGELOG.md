@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- A static landing page, `docs/index.html` (serve `docs/` with GitHub Pages): an interactive
+  keypoint-thread demo, a step-through of the progressive search, the architecture diagrams, a
+  real-time speed race and the real results from the README, with scroll animations.
+  `compose.yaml` now passes `RANKER` through.
 - README: a "See it work" section with real search results on 95 freely licensed photos
   (embedding only vs poshak, over 190 re-shots), a keypoint-match figure, and
   `docs/demo/build_demo.py` to rebuild them. Photo credits in `docs/demo/ATTRIBUTION.md`.
