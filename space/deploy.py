@@ -118,9 +118,10 @@ def main() -> int:
             "Not logged in to Hugging Face. Run `hf auth login` or set HF_TOKEN (a write token)."
         )
     print(f"signed in as {user}")
-    api.create_repo(
-        args.repo, repo_type="space", space_sdk="docker", exist_ok=True, private=args.private
-    )
+    # Skip create_repo for an existing Space: the create call is what Hugging Face refuses
+    # (402) on a free account, while uploading to a Space you already own is not.
+    if not api.repo_exists(args.repo, repo_type="space"):
+        api.create_repo(args.repo, repo_type="space", space_sdk="docker", private=args.private)
     api.upload_folder(folder_path=str(out), repo_id=args.repo, repo_type="space",
                       commit_message="Deploy the poshak demo")  # fmt: skip
     print(

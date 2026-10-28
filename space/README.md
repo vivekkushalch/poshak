@@ -6,7 +6,7 @@ sdk: docker
 app_port: 8088
 pinned: false
 license: mit
-short_description: Find the exact textile from a photo, not one that looks like it
+short_description: Find the exact textile from a photo, not a lookalike
 ---
 
 # poshak demo
