@@ -86,8 +86,10 @@ with `RANKER=legacy`; both formats stay readable. See [ADR 0006](adr/0006-progre
 
 ## A public demo on Hugging Face Spaces
 
-`space/deploy.py` publishes a read-only demo to a Docker Space on the free CPU tier (2 vCPU, 16 GB),
-so you can hand someone a link. The image bakes in a gallery of 95 freely licensed photos, sample
+`space/deploy.py` publishes a read-only demo to a Docker Space (CPU Basic hardware: 2 vCPU, 16 GB, no
+hourly cost) so you can hand someone a link. Hugging Face only lets paid accounts create Docker
+Spaces (PRO for a personal account, Team or Enterprise for an organization); a free account can
+only create Static Spaces, which cannot run poshak. The image bakes in a gallery of 95 freely licensed photos, sample
 queries to click, the `v2` ranker and `READ_ONLY=1`: visitors can search, but nothing can be added,
 changed or deleted.
 

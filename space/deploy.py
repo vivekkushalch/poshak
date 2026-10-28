@@ -1,4 +1,6 @@
-"""Publish the read-only demo to a Hugging Face Space (a Docker Space on the free CPU tier).
+"""Publish the read-only demo to a Hugging Face Space (a Docker Space on CPU Basic hardware).
+
+Creating a Docker Space needs a paid Hugging Face plan (PRO, Team or Enterprise).
 
     hf auth login                       # once, or set HF_TOKEN
     uv run python space/deploy.py --repo your-name/poshak
