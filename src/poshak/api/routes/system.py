@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from fastapi import APIRouter
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 
 from ..deps import ContainerDep
 from ..schemas.system import ClientConfig, HealthResponse
@@ -47,6 +47,21 @@ def ready(c: ContainerDep) -> JSONResponse:
 def client_config(c: ContainerDep) -> ClientConfig:
     """What the browser pages need: where public images are hosted."""
     return ClientConfig(image_base_url=c.settings.image_base_url)
+
+
+@router.get("/", include_in_schema=False)
+def root() -> RedirectResponse:
+    return RedirectResponse("/ui")
+
+
+@router.get("/samples/{name}", include_in_schema=False)
+def sample(name: str, c: ContainerDep) -> FileResponse:
+    """Sample query photos for the demo (SAMPLES_DIR). Flat names only."""
+    folder = c.settings.samples_dir
+    path = folder / name if folder else None
+    if path is None or name != Path(name).name or name.startswith(".") or not path.is_file():
+        raise HTTPException(status_code=404, detail="no such sample")
+    return FileResponse(path)
 
 
 @router.get("/ui", response_class=HTMLResponse, include_in_schema=False)

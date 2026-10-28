@@ -64,6 +64,10 @@ class Settings(BaseSettings):
     ranker: Literal["legacy", "v2"] = "legacy"
     v2_max_views: int = Field(1000, ge=1)
 
+    # public demo: refuse every write except search, and serve sample query photos from a folder
+    read_only: bool = False
+    samples_dir: Path | None = None
+
     # serving
     image_base_url: str = ""
     max_concurrent_searches: int = Field(2, ge=1)

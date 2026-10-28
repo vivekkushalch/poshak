@@ -12,3 +12,6 @@ __pycache__/
 *.sql
 .localdata/
 .localcorpus/
+
+# generated Hugging Face Space bundle
+space/_bundle/

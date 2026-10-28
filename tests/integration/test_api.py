@@ -218,3 +218,52 @@ def test_categories_roundtrip(client):
     r = client.post("/categories", data={"item": " Kurta ", "category": "fabric"})
     assert r.json() == {"status": "ok", "item": "Kurta", "category": "fabric"}
     assert client.post("/categories", data={"item": "K", "category": "x"}).status_code == 422
+
+
+# --- demo mode: read-only, sample queries, landing redirect --------------------------
+def test_root_redirects_to_the_search_page(client):
+    r = client.get("/", follow_redirects=False)
+    assert r.status_code in (302, 307) and r.headers["location"] == "/ui"
+
+
+def test_read_only_mode_allows_search_and_blocks_every_write(tmp_path):
+    c = make_container(tmp_path, read_only=True)
+    for row in catalog():
+        item = "Sherwani" if row["category"] == "cloth" else "Fabric"
+        c.indexer.stage(row["photo"], png(row["image"]))
+        c.indexer.index(row["photo"], row["sku_id"], "", item, reload=False)
+    c.state.reload()
+    with TestClient(create_app(container=c)) as client:
+        img = png(catalog()[0]["image"])
+        ok = client.post("/search", data={"category": "cloth"}, files={"image": ("q.png", img)})
+        assert ok.status_code == 200 and ok.json()["results"][0]["sku_id"] == 1
+        assert client.get("/health").status_code == 200
+        for path, kwargs in (
+            (
+                "/ingest",
+                {
+                    "data": {"sku_id": 9, "item": "Fabric", "photo_name": "x.jpg"},
+                    "files": {"image": ("x.jpg", img)},
+                },
+            ),
+            ("/forget", {"data": {"photo_name": "1_0.jpg"}}),
+            ("/categories", {"data": {"item": "Kurta", "category": "cloth"}}),
+        ):
+            r = client.post(path, **kwargs)
+            assert r.status_code == 403 and "read-only" in r.json()["detail"], path
+        assert c.state.current.stats()["cloth_orig"] > 0  # nothing was deleted
+
+
+def test_samples_are_served_from_a_flat_folder_only(tmp_path):
+    folder = tmp_path / "samples"
+    folder.mkdir()
+    (folder / "index.json").write_text('[{"file": "a.jpg"}]', encoding="utf-8")
+    (folder / "a.jpg").write_bytes(b"\xff\xd8\xff")
+    (tmp_path / "secret.txt").write_text("no", encoding="utf-8")
+    with TestClient(create_app(container=make_container(tmp_path / "d", samples_dir=folder))) as c:
+        assert c.get("/samples/index.json").json() == [{"file": "a.jpg"}]
+        assert c.get("/samples/a.jpg").status_code == 200
+        assert c.get("/samples/missing.jpg").status_code == 404
+        assert c.get("/samples/..%2Fsecret.txt").status_code == 404
+    with TestClient(create_app(container=make_container(tmp_path / "e"))) as c:
+        assert c.get("/samples/index.json").status_code == 404  # no SAMPLES_DIR configured

@@ -4,7 +4,8 @@ call create_app() with their own settings or a pre-built container."""
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import __version__
@@ -46,6 +47,17 @@ def create_app(settings: Settings | None = None, container: Container | None = N
 
     app = FastAPI(title="poshak", version=__version__, description=DESCRIPTION, lifespan=lifespan)
     register_exception_handlers(app)
+
+    @app.middleware("http")
+    async def read_only_guard(request: Request, call_next):
+        """READ_ONLY=1 (the public demo): search works, nothing can be added or changed."""
+        c = getattr(request.app.state, "container", None)
+        writes = request.method not in ("GET", "HEAD", "OPTIONS") and request.url.path != "/search"
+        if c is not None and c.settings.read_only and writes:
+            detail = "This is a read-only demo. Run poshak yourself to index your own photos."
+            return JSONResponse({"detail": detail}, status_code=403)
+        return await call_next(request)
+
     app.mount("/static", RevalidatingStatic(directory=STATIC), name="static")
     for router in routers:
         app.include_router(router)

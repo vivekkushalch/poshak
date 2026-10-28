@@ -84,6 +84,27 @@ with `RANKER=legacy`; both formats stay readable. See [ADR 0006](adr/0006-progre
 - The existing index keeps working. On first start a migration rewrites stored
   descriptor paths to plain keys, and the model tag is unchanged.
 
+## A public demo on Hugging Face Spaces
+
+`space/deploy.py` publishes a read-only demo to a Docker Space on the free CPU tier (2 vCPU, 16 GB),
+so you can hand someone a link. The image bakes in a gallery of 95 freely licensed photos, sample
+queries to click, the `v2` ranker and `READ_ONLY=1`: visitors can search, but nothing can be added,
+changed or deleted.
+
+```bash
+hf auth login                                    # once; needs a token with write access
+uv run python space/deploy.py --repo your-name/poshak
+```
+
+`--dry-run` builds the bundle in `space/_bundle` without uploading. The Space builds the image
+itself (ten to twenty minutes the first time), opens at `/ui`, and sleeps after a while without
+traffic; the first visit afterwards takes about a minute to wake it. Free Spaces have no
+persistent disk, which is why the gallery is baked into the image rather than uploaded at run time.
+
+Two settings make this possible and are useful elsewhere: `READ_ONLY=1` rejects every write except
+`POST /search`, and `SAMPLES_DIR` serves sample query photos (`index.json` plus the images) to the
+search page.
+
 ## Releasing
 
 1. Move the `Unreleased` entries in `CHANGELOG.md` under a new `## X.Y.Z` heading and set the

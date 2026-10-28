@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Hugging Face Space demo.** `space/deploy.py` publishes a read-only demo (a baked-in gallery
+  of 95 freely licensed photos and clickable sample queries) to a Docker Space. New settings
+  `READ_ONLY=1` (search works, every other write returns 403) and `SAMPLES_DIR`; `/` now redirects
+  to the search page, which was rebuilt with sample queries, a query preview, a match meter per
+  result and the measured search time.
 - A static landing page, `docs/index.html` (serve `docs/` with GitHub Pages): an interactive
   keypoint-thread demo, a step-through of the progressive search, the architecture diagrams, a
   real-time speed race and the real results from the README, with scroll animations.
