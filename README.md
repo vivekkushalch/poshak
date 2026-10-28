@@ -59,6 +59,17 @@ right (green: the right photo, with its match count).
 - Rebuild it all with `uv run python docs/demo/build_demo.py --out docs/assets/demo`. It downloads
   the photos, runs the real SigLIP model and redraws both figures.
 
+### The app
+
+The service ships with a search page at `/ui` and an admin at `/admin`. These are real
+screenshots of the demo gallery.
+
+<img alt="The search page after picking a sample: the re-shot query on top, then five results. The right photo is first, with 309 matching keypoints against 8 or fewer for the others." src="docs/assets/app/ui-results.png" width="100%">
+
+| Search page | Admin catalog |
+|---|---|
+| <img alt="The search page: a headline, eight sample queries to click, and an upload form." src="docs/assets/app/ui-search.png"> | <img alt="The admin catalog: a grid of indexed photos with SKU, category, photo and cutout previews, replace and delete buttons." src="docs/assets/app/admin-catalog.png"> |
+
 ## Highlights
 
 - **Two-stage retrieval.** SigLIP cosine recalls 40 candidates. Lowe-ratio SIFT
