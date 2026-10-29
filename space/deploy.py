@@ -1,6 +1,8 @@
 """Publish the read-only demo to a Hugging Face Space (a Docker Space on CPU Basic hardware).
 
-Creating a Docker Space needs a paid Hugging Face plan (PRO, Team or Enterprise).
+Creating a new Docker Space needs a paid Hugging Face plan (PRO, Team or Enterprise). A free
+account can deploy to a Docker Space it already owns, because this script only creates the Space
+when it does not exist.
 
     hf auth login                       # once, or set HF_TOKEN
     uv run python space/deploy.py --repo your-name/poshak
