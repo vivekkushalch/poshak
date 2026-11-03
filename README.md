@@ -310,10 +310,87 @@ compromise between the two kinds of data. Reproduce with `bench/lab.py` (accurac
 
 ## Architecture
 
+**System context.** Who talks to poshak and what it depends on.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/arch/context-dark.svg">
+  <img alt="System context diagram: shoppers, catalog staff and a storefront on one side; poshak in the middle; object storage, an optional background-removal API and the Hugging Face Hub on the other" src="docs/assets/arch/context-light.svg">
+</picture>
+
+**Containers.** What runs inside the service.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/arch/containers-dark.svg">
+  <img alt="Container diagram: one container holding the FastAPI HTTP API, the ingest worker, the SIFT verify pool, the model runtime, SQLite and the blob store" src="docs/assets/arch/containers-light.svg">
+</picture>
+
+**Components.** The layers in the code, and which way dependencies point.
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/arch/components-dark.svg">
   <img alt="Component diagram: driving adapters, application core, driven adapters" src="docs/assets/arch/components-light.svg">
 </picture>
+
+**A search, step by step.** This is the default (`legacy`) ranker. The opt-in `v2` ranker skips the
+cutout pass when the first pass is decisive, see
+[the v2 ranker](docs/architecture.md#81-the-v2-ranker-opt-in).
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant SF as Storefront
+    participant API as /search route
+    participant S as SearchService
+    participant IS as IndexState
+    participant M as Model runtime
+    participant E as engine.pipeline
+    participant B as Blob store
+    SF->>API: POST /search (photo, category, top_k)
+    Note over API: plain def, runs in the threadpool
+    API->>S: search(bytes, category, top_k)
+    S->>S: acquire slot (wait up to 10 s, else 503 + Retry-After)
+    S->>IS: current snapshot (one read)
+    S->>M: U2Net cutout of full-size query (cloth only)
+    loop cutout pass, then original pass
+        S->>E: recall_verify(view)
+        E->>M: SigLIP embed at 768 px
+        E->>E: cosine top 40
+        par 40 candidates on the verify pool
+            E->>B: descriptors (LRU cache first)
+            E->>E: Lowe ratio match
+        end
+        E->>E: best image per SKU
+    end
+    E-->>S: fused, sorted results
+    S-->>API: results
+    API-->>SF: 200 typed JSON
+```
+
+**An ingest, step by step.** The route answers `202` straight away. A worker thread indexes the photo.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as Client
+    participant API as /ingest route
+    participant J as JobService
+    participant DB as SQLite
+    participant W as Worker thread
+    participant X as IndexerService
+    C->>API: POST /ingest (photo, sku, item)
+    API->>X: stage(): put original in blob store
+    API->>J: submit(JobItem)
+    J->>DB: upsert job + item (status queued)
+    API-->>C: 202 {batch_id}
+    W->>J: next item
+    J->>DB: status running
+    J->>X: index(photo, reload=False)
+    X->>X: resolve category, skip if already indexed
+    X->>X: cutout, embed both views, SIFT both views
+    X->>DB: upsert image row
+    J->>DB: status done or failed (+ error)
+    W->>W: reload index when queue drains or every 50 items
+```
 
 Ports and adapters around a pure engine. `container.py` is the one place that picks
 implementations, so adding a backend is a new class and one line of wiring. A test
