@@ -5,9 +5,9 @@
   <img alt="poshak: visual search for Indian wear. Snap a photo, find the exact piece in your catalog." src="docs/assets/brand/banner-light.svg" width="100%">
 </picture>
 
-<h3>Embeddings find lookalikes. poshak finds the exact garment.</h3>
+<h3>Find-similar search returns lookalikes. poshak finds the exact garment.</h3>
 
-Two-stage visual search for Indian wear · SigLIP recall + SIFT verification · built to run on a 2 GB CPU box
+Photo in, exact catalog item out · an AI shortlist, then a detail-by-detail check · runs on a 2 GB CPU box
 
 [![CI](https://github.com/vivekkushalch/poshak/actions/workflows/ci.yml/badge.svg)](https://github.com/vivekkushalch/poshak/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
@@ -21,25 +21,33 @@ Two-stage visual search for Indian wear · SigLIP recall + SIFT verification · 
 
 <br>
 
+## What is poshak?
+
+**You give it a photo of a garment or a piece of fabric. It finds that exact piece in your
+catalog, not just something that looks similar.**
+
+Indian wear catalogs are full of near-identical pieces. A hundred sherwanis can share a cut and a
+colour and differ only in the zari work, the buttons and the borders. The usual "find similar"
+image search judges the overall look, so it hands back lookalikes. poshak is built for the
+case where the answer has to be *that* piece.
+
+It works like finding a book in a library. First it narrows to the right shelf quickly. Then it
+checks each candidate up close.
+
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/pipeline-dark.svg">
-  <img alt="Search pipeline: embed, recall 40 by cosine, verify with SIFT, fuse two views per SKU" src="docs/assets/pipeline-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/how-simple-dark.svg">
+  <img alt="How a search works in four steps: send a photo, shortlist the 40 most similar pieces with an AI model, check the fine details point by point, get the exact match ranked" src="docs/assets/how-simple-light.svg" width="100%">
 </picture>
 
-Upload a photo of a sherwani, an indowestern or a fabric swatch. poshak returns the
-catalog SKUs it matches, ranked by how many local features line up.
-
-Image embeddings like CLIP and SigLIP are good at "a long embroidered jacket".
-They are bad at "*that* long embroidered jacket". In an Indian wear catalog,
-hundreds of pieces share a cut and a colour and differ only in their zari,
-butis and borders. poshak uses an embedding to shortlist and SIFT to decide.
+It is a web service with a search page, an admin for managing the catalog, and a REST API, so a
+shop's website or app can call it. It runs on a small CPU-only server with no GPU.
 
 ## See it work
 
 <img alt="Three searches by re-shot photo. An embedding-only search returns lookalikes; poshak returns the exact photo with hundreds of matching keypoints." src="docs/assets/demo/search-demo.jpg" width="100%">
 
 This is real output, not a mock-up. Each row is one search: the query on the left, what an
-embedding-only search returns in the middle (red: a different photo), what poshak returns on the
+ordinary find-similar search (an "embedding-only" search) returns in the middle (red: a different photo), what poshak returns on the
 right (green: the right photo, with its match count).
 
 | Right photo ranked first | Embedding only | poshak |
@@ -211,6 +219,24 @@ uv run poshak seed --json catalog.json   # resumable; --force re-indexes
 ```
 
 ## How it works
+
+The same flow with the technical names:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/pipeline-dark.svg">
+  <img alt="Search pipeline: embed, recall 40 by cosine, verify with SIFT, fuse two views per SKU" src="docs/assets/pipeline-light.svg">
+</picture>
+
+In plain words:
+
+- **Embedding (SigLIP).** An AI model turns a photo into a list of numbers that describes how it
+  looks overall. Similar-looking photos get similar numbers. This is fast but fuzzy, so poshak
+  only uses it to pick a shortlist.
+- **Cosine similarity.** The score for how alike two of those lists of numbers are.
+- **Keypoints (SIFT).** A classic computer-vision method that finds distinctive spots in a photo,
+  such as the corner of a motif or a stitch pattern. Two photos of the same piece share many of
+  them. This is slower but exact, so poshak runs it on the shortlist only.
+- **SKU.** The ID of one item in your catalog.
 
 | Stage | What happens | Cost |
 |---|---|---|
