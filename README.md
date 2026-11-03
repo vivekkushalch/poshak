@@ -10,12 +10,12 @@
 Two-stage visual search for Indian wear · SigLIP recall + SIFT verification · built to run on a 2 GB CPU box
 
 [![CI](https://github.com/vivekkushalch/poshak/actions/workflows/ci.yml/badge.svg)](https://github.com/vivekkushalch/poshak/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab.svg)](pyproject.toml)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
-[Quickstart](#quickstart) · [How it works](#how-it-works) · [Benchmarks](#benchmarks) · [Architecture](docs/architecture.md) · [API](#api) · [Deploy](docs/deployment.md)
+[Quickstart](#quickstart) · [How it works](#how-it-works) · [Benchmarks](#benchmarks) · [Architecture](docs/architecture.md) · [Built with](#built-with) · [API](#api) · [Deploy](docs/deployment.md)
 
 </div>
 
@@ -84,6 +84,48 @@ screenshots of the demo gallery.
   API with OpenAPI docs, liveness and readiness probes, settings validated at boot.
 - **Refactor-proof ranking.** A golden test pins ranked results from the original
   implementation at the engine, service and HTTP layers.
+
+## Built with
+
+| Part | Used |
+|---|---|
+| Web API | [FastAPI](https://fastapi.tiangolo.com) on Uvicorn, [Pydantic](https://docs.pydantic.dev) v2 for schemas and settings |
+| Embeddings | [SigLIP](https://huggingface.co/google/siglip-base-patch16-224) through Hugging Face Transformers, running on PyTorch (CPU) |
+| Local features | [OpenCV](https://opencv.org) SIFT, NumPy for the vector search |
+| Background removal | U2Net through [rembg](https://github.com/danielgatis/rembg) and ONNX Runtime |
+| Storage | SQLite for the index; local disk or any S3-compatible store (boto3: AWS S3, MinIO, R2) |
+| Web UI | Plain HTML, CSS and JavaScript, no build step: the search page at `/ui` and the admin at `/admin` |
+| Tooling | [uv](https://docs.astral.sh/uv/), Docker, GitHub Actions, [Ruff](https://github.com/astral-sh/ruff), pytest |
+
+<details>
+<summary>Project layout</summary>
+
+```
+src/poshak/
+├── api/              routes and Pydantic schemas
+├── services/         search, indexer, jobs, catalog, live index state
+├── engine/           recall, SIFT verification, scoring, fusion (no I/O)
+├── domain/           models, Protocol ports, errors
+├── infrastructure/
+│   ├── storage/      local disk, S3
+│   ├── background/   U2Net, HTTP, fallback chain
+│   ├── embedding/    SigLIP
+│   ├── vector/       numpy exact search
+│   └── db/           SQLite repositories + migrations
+├── core/             settings, logging, API-key check
+├── static/           search page (/ui) and admin (/admin): HTML, CSS, JS
+├── container.py      composition root
+├── main.py           create_app()
+└── cli.py            poshak serve | seed | refresh-descriptors
+tests/                unit, integration and smoke tests, golden ranking files
+bench/                accuracy and latency benchmarks (lab.py, evaluate.py, latency.py)
+docs/                 architecture, ADRs, deployment guide, landing page, demo build
+space/                Hugging Face Space bundle and deploy script
+.github/workflows/    CI, Docker image, release
+Dockerfile · compose.yaml · compose.prod.yaml · pyproject.toml
+```
+
+</details>
 
 ## Quickstart
 
@@ -157,7 +199,7 @@ DISABLE_AUTH=1 DATA_ROOT=./.localdata CORPUS_DIR=./.localcorpus/uploads \
 ```
 
 Then open `/ui` for a phone-friendly search page, `/admin` to upload photos, watch
-indexing jobs, browse the catalog and fix cutouts, or `/docs` for the OpenAPI reference.
+indexing jobs, browse the catalog and fix cutouts, or `/docs` for the interactive API reference.
 
 To index a catalog that is already in storage:
 
@@ -278,29 +320,6 @@ containers, request and ingest sequences, the data model, ranking formulas, the
 latency and memory budgets, failure modes, security and the scaling path.
 Decisions and their trade-offs are recorded as [ADRs](docs/adr).
 
-<details>
-<summary>Project layout</summary>
-
-```
-src/poshak/
-├── api/              routes and Pydantic schemas
-├── services/         search, indexer, jobs, catalog, live index state
-├── engine/           recall, SIFT verification, scoring, fusion (no I/O)
-├── domain/           models, Protocol ports, errors
-├── infrastructure/
-│   ├── storage/      local disk, S3
-│   ├── background/   U2Net, HTTP, fallback chain
-│   ├── embedding/    SigLIP
-│   ├── vector/       numpy exact search
-│   └── db/           SQLite repositories + migrations
-├── core/             settings, logging, API-key check
-├── container.py      composition root
-├── main.py           create_app()
-└── cli.py            poshak serve | seed
-```
-
-</details>
-
 ## API
 
 | Method | Path | Purpose |
@@ -315,7 +334,13 @@ src/poshak/
 | `GET` | `/img/original/{name}` · `/img/rmbg/{name}` | Serve stored images |
 | `GET` | `/health` · `/health/live` · `/health/ready` | Status and probes |
 
-Data routes require an `X-API-Key` header. Full schemas at `/docs`.
+Data routes require an `X-API-Key` header.
+
+FastAPI generates the full reference from the code, so it never goes stale. With the server on
+`localhost:8088`: [Swagger UI at `/docs`](http://localhost:8088/docs) to try requests in the
+browser, [ReDoc at `/redoc`](http://localhost:8088/redoc) to read them, and the raw schema at
+`/openapi.json` for client generators. Swagger UI sends no `X-API-Key` header, so try the protected routes with
+curl, or start the server with `DISABLE_AUTH=1` while you explore.
 
 <details>
 <summary>Configuration</summary>
@@ -397,5 +422,6 @@ none of its images are redistributed; check its terms before you reuse it.
 
 ## License
 
-Code is [MIT](LICENSE). The logo and brand assets are described in
+Code is [Apache-2.0](LICENSE), copyright 2026 vivekkushalch. If you copy or redistribute it,
+keep the license text and the copyright notices, and mark files you changed. The logo and brand assets are described in
 [docs/brand.md](docs/brand.md); the wordmark uses Sora under the SIL Open Font License.

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **License changed from MIT to Apache-2.0.** Copies and derivative works must keep the license
+  text and copyright notices and mark changed files. Versions released before this change stay MIT.
+
 - **Hugging Face Space demo.** `space/deploy.py` publishes a read-only demo (a baked-in gallery
   of 95 freely licensed photos and clickable sample queries) to a Docker Space. New settings
   `READ_ONLY=1` (search works, every other write returns 403) and `SAMPLES_DIR`; `/` now redirects

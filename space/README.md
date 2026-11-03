@@ -5,7 +5,7 @@ colorTo: yellow
 sdk: docker
 app_port: 8088
 pinned: false
-license: mit
+license: apache-2.0
 short_description: Find the exact textile from a photo, not a lookalike
 ---
 
