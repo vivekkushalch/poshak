@@ -85,6 +85,9 @@ screenshots of the demo gallery.
 - **Refactor-proof ranking.** A golden test pins ranked results from the original
   implementation at the engine, service and HTTP layers.
 
+Want the whole design? The [architecture document](docs/architecture.md) has the diagrams, the
+ranking formulas, the latency and memory budgets and the scaling path.
+
 ## Built with
 
 | Part | Used |
@@ -315,9 +318,23 @@ compromise between the two kinds of data. Reproduce with `bench/lab.py` (accurac
 Ports and adapters around a pure engine. `container.py` is the one place that picks
 implementations, so adding a backend is a new class and one line of wiring. A test
 enforces the layer rules on every CI run.
-The [architecture document](docs/architecture.md) covers system context,
-containers, request and ingest sequences, the data model, ranking formulas, the
-latency and memory budgets, failure modes, security and the scaling path.
+
+The **[architecture document](docs/architecture.md)** is the full design write-up, with diagrams
+throughout. What is in it:
+
+- **Design:** [system context](docs/architecture.md#3-system-context),
+  [containers](docs/architecture.md#4-containers) and
+  [components and ports](docs/architecture.md#5-components).
+- **Behaviour:** [search, ingest, job states and recovery](docs/architecture.md#6-runtime-behaviour)
+  as sequence diagrams, and the [data model](docs/architecture.md#7-data).
+- **Ranking:** [the formulas, including the opt-in v2 ranker](docs/architecture.md#8-ranking).
+- **Budgets:** [latency and memory](docs/architecture.md#9-quality-attributes) on a 2 GB box, with
+  [failure modes](docs/architecture.md#10-failure-modes-and-recovery) and
+  [security](docs/architecture.md#11-security).
+- **Direction:** [deployment and the scaling path](docs/architecture.md#12-deployment-and-scaling),
+  [alternatives considered](docs/architecture.md#13-alternatives-considered) and
+  [open risks](docs/architecture.md#14-risks-and-open-questions).
+
 Decisions and their trade-offs are recorded as [ADRs](docs/adr).
 
 ## API
